@@ -6,11 +6,8 @@ import Database.DatabaseHandler;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.lang.reflect.InvocationTargetException;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Path("/users")
@@ -19,24 +16,20 @@ public class UsersResource {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getUsers() throws SQLException, InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    public Response getUsers() {
         List<User> users = DatabaseHandler.getResource("users");
         return Response.ok(users).build();
-    }
-
-    @GET
-    @Produces(MediaType.TEXT_PLAIN)
-    @Path("/size")
-    public Integer countUsers() {
-        return users.size();
     }
 
     @POST
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     public Response createUsers(User newUser) {
-        users.add(newUser);
-        return Response.ok(users).build();
+        boolean added = DatabaseHandler.addResource("users", newUser);
+        if (added)
+            return Response.ok("User added correctly.").build();
+        else
+            return Response.status(Response.Status.BAD_REQUEST).build();
     }
 
     @PUT
@@ -61,10 +54,10 @@ public class UsersResource {
     @Consumes(MediaType.APPLICATION_JSON)
     public Response deleteUser(
             @PathParam("id") Integer id) {
-        boolean doesUserExist = DatabaseHandler.userExistance(id, "users");
+        boolean doesUserExist = DatabaseHandler.userExistence("users", id);
         boolean removed = false;
         if (doesUserExist)
-            removed = DatabaseHandler.deleteResource(id, "users");
+            removed = DatabaseHandler.deleteResource("users", id);
         if (removed)
             return Response.ok().build();
         else

@@ -2,6 +2,8 @@ package Database;
 
 import Data.User;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.*;
 import java.util.ArrayList;
@@ -36,7 +38,7 @@ public class DatabaseHandler {
         }
     }
 
-    public static boolean userExistance(Integer id, String table) {
+    public static boolean userExistence(String table, Integer id) {
         try {
             Statement stmt = connection.createStatement();
             ResultSet result = stmt.executeQuery("SELECT 1 FROM " + table + " WHERE ID_user = " + id);
@@ -49,7 +51,32 @@ public class DatabaseHandler {
         }
     }
 
-    public static boolean deleteResource(Integer id, String table) {
+    public static boolean addResource(String table, User newUser) {
+        try {
+            Field[] fields = User.class.getDeclaredFields();
+
+            String query = "INSERT INTO " + table + " (login, email, first_name, last_name, creation_date) VALUES (?, ?, ?, ?, ?)";
+            PreparedStatement preparedStmt = connection.prepareStatement(query);
+
+            for(int i = 1; i < fields.length; i++) {
+                // invoking the getter
+                Method method = User.class.getDeclaredMethod("get" + fields[i].getName().substring(0, 1).toUpperCase() + fields[i].getName().substring(1));
+                String var = (String) method.invoke(newUser);
+                preparedStmt.setString (i, var);
+            }
+
+            preparedStmt.execute();
+
+            System.out.println("querying INSERT INTO " + table);
+            return true;
+        }
+        catch (SQLException | NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public static boolean deleteResource(String table, Integer id) {
         try {
             Statement stmt = connection.createStatement();
             stmt.executeUpdate("DELETE FROM " + table + " WHERE ID_user = " + id);

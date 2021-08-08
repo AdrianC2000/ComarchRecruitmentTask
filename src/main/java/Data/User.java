@@ -1,19 +1,19 @@
 package Data;
 
 public class User {
-    private Long ID_user;
+    private Integer ID_user;
     private String login;
     private String email;
     private String first_name;
     private String last_name;
     private String creation_date;
 
-    public Long getID_user() {
+    public Integer getID_user() {
         return ID_user;
     }
 
     public void setID_user(String ID_user) {
-        this.ID_user = Long.valueOf(ID_user);
+        this.ID_user = Integer.valueOf(ID_user);
     }
 
     public String getLogin() {
