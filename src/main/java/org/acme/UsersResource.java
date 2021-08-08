@@ -33,19 +33,19 @@ public class UsersResource {
     }
 
     @PUT
-    @Path("{id}/{userName}")
+    @Path("{id}/{parameterToChange}")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     public Response updateUser(
-            @PathParam("id") Long id,
-            @PathParam("userName") String userName) {
-        users = users.stream().map(user -> {
-            if(user.getID_user().equals(id)) {
-                user.setLogin(userName);
-            }
-            return user;
-        }).collect(Collectors.toList());
-        return Response.ok(users).build();
+            @PathParam("id") Integer id,
+            @PathParam("parameterToChange") String param,
+            @QueryParam("value") String valueToSet) {
+        System.out.println("id = " + id + ", parameterToChange = " + param + ", valueToSet = " + valueToSet);
+        boolean updated = DatabaseHandler.updateResource("users", id, param, valueToSet);
+        if (updated)
+            return Response.ok().build();
+        else
+            return Response.status(Response.Status.NOT_FOUND).build();
     }
 
     @DELETE

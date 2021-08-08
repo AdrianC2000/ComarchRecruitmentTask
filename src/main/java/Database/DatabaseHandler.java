@@ -76,6 +76,25 @@ public class DatabaseHandler {
         }
     }
 
+    public static boolean updateResource(String table, Integer id, String parameter, String valueToSet) {
+        try {
+            if(userExistence(table, id)) {
+                Statement stmt = connection.createStatement();
+                String query = "UPDATE " + table + " SET " + parameter + " = '" + valueToSet + "' WHERE ID_user = " + id;
+                System.out.println(query);
+                stmt.executeUpdate("UPDATE " + table + " SET " + parameter + " = '" + valueToSet + "' WHERE ID_user = " + id);
+                System.out.println("querying UPDATE " + table + " WHERE ID_user = " + id);
+                return true;
+            }
+            else
+                return false;
+        }
+        catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     public static boolean deleteResource(String table, Integer id) {
         try {
             Statement stmt = connection.createStatement();
