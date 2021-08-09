@@ -1,5 +1,8 @@
 package Data;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+
 public class User {
     private Integer ID_user;
     private String login;
@@ -54,5 +57,15 @@ public class User {
 
     public void setCreation_date(String creation_date) {
         this.creation_date = creation_date;
+    }
+
+    public String allMethodsGetter(String methodName, User requirements) {
+        try {
+            Method method = User.class.getDeclaredMethod(methodName);
+            return (String) method.invoke(requirements);
+        }
+        catch (InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
+            return null;
+        }
     }
 }
