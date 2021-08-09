@@ -14,17 +14,17 @@ import java.util.List;
 public class DatabaseHandler {
     private static Connection connection = null;
 
-    public static String establishConnection() {
+    public static boolean establishConnection() {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
             String url = "jdbc:mysql://localhost:3306/comarch_database";
             String user = "Adi";
             String password = "DatabasePassword123";
             connection = DriverManager.getConnection(url, user, password);
-            return "Connection established correctly.";
+            return true;
         } catch (ClassNotFoundException | SQLException e) {
             e.printStackTrace();
-            return "An error occurred during connecting to the database.";
+            return false;
         }
     }
 
@@ -55,97 +55,129 @@ public class DatabaseHandler {
         }
     }
 
-    public static boolean addUser(String tableName, Object object) {
-        PreparedStatement preparedStmt = null;
+    public static boolean tableExistence(String table) {
         try {
-            if (tableName.equals("users")) {
-                Gson gson = new Gson();
-                String tmp = gson.toJson(object);
-                User newUser = gson.fromJson(tmp, User.class);
+            Statement stmt = connection.createStatement();
+            ResultSet result = stmt.executeQuery("SELECT 1 FROM " + table);
+            System.out.println("SELECT 1 FROM " + table);
+            return result.next();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 
-                Field[] fields = User.class.getDeclaredFields();
+    public static Integer addResource(String tableName, Object object) {
+        PreparedStatement preparedStmt = null;
+        if (tableExistence(tableName)) {
+            try {
+                if (tableName.equals("users")) {
+                    Gson gson = new Gson();
+                    String tmp = gson.toJson(object);
+                    User newUser = gson.fromJson(tmp, User.class);
 
-                String query = "INSERT INTO " + tableName + " (login, email, first_name, last_name, creation_date) VALUES (?, ?, ?, ?, ?)";
-                preparedStmt = connection.prepareStatement(query);
+                    Field[] fields = User.class.getDeclaredFields();
 
-                for (int i = 1; i < fields.length; i++) {
-                    // invoking the getter
-                    Method method = User.class.getDeclaredMethod("get" + fields[i].getName().substring(0, 1).toUpperCase() + fields[i].getName().substring(1));
-                    String var = (String) method.invoke(newUser);
-                    preparedStmt.setString(i, var);
-                }
-            }
-            else if (tableName.equals("books")) {
-                Gson gson = new Gson();
-                String tmp = gson.toJson(object);
-                Book newBook = gson.fromJson(tmp, Book.class);
+                    String query = "INSERT INTO " + tableName + " (login, email, first_name, last_name, creation_date) VALUES (?, ?, ?, ?, ?)";
+                    preparedStmt = connection.prepareStatement(query);
 
-                Field[] fields = Book.class.getDeclaredFields();
-
-                String query = "INSERT INTO " + tableName + " (title, author, is_taken, taken_by, taken_date, return_date) VALUES (?, ?, ?, ?, ?, ?)";
-                preparedStmt = connection.prepareStatement(query);
-
-                for (int i = 1; i < fields.length; i++) {
-                    // invoking the getter
-                    String methodName = "get" + fields[i].getName().substring(0, 1).toUpperCase() + fields[i].getName().substring(1);
-                    Method method = Book.class.getDeclaredMethod(methodName);
-
-                    String var;
-                    Boolean isTaken;
-                    if (methodName.equals("getIs_taken")) {
-                        isTaken = (Boolean) method.invoke(newBook);
-                        System.out.println(isTaken);
-                        preparedStmt.setBoolean(i, isTaken);
-                    }
-                    else {
-                        var = (String) method.invoke(newBook);
+                    for (int i = 1; i < fields.length; i++) {
+                        // invoking the getter
+                        Method method = User.class.getDeclaredMethod("get" + fields[i].getName().substring(0, 1).toUpperCase() + fields[i].getName().substring(1));
+                        String var = (String) method.invoke(newUser);
                         preparedStmt.setString(i, var);
                     }
+                } else if (tableName.equals("books")) {
+                    Gson gson = new Gson();
+                    String tmp = gson.toJson(object);
+                    Book newBook = gson.fromJson(tmp, Book.class);
+
+                    Field[] fields = Book.class.getDeclaredFields();
+
+                    String query = "INSERT INTO " + tableName + " (title, author, is_taken, taken_by, taken_date, return_date) VALUES (?, ?, ?, ?, ?, ?)";
+                    preparedStmt = connection.prepareStatement(query);
+
+                    for (int i = 1; i < fields.length; i++) {
+                        // invoking the getter
+                        String methodName = "get" + fields[i].getName().substring(0, 1).toUpperCase() + fields[i].getName().substring(1);
+                        Method method = Book.class.getDeclaredMethod(methodName);
+
+                        String var;
+                        Boolean isTaken;
+                        if (methodName.equals("getIs_taken")) {
+                            isTaken = (Boolean) method.invoke(newBook);
+                            System.out.println(isTaken);
+                            preparedStmt.setBoolean(i, isTaken);
+                        } else {
+                            var = (String) method.invoke(newBook);
+                            preparedStmt.setString(i, var);
+                        }
+                    }
+                }
+
+                assert preparedStmt != null;
+                preparedStmt.execute();
+
+                System.out.println("querying INSERT INTO " + tableName);
+
+                return 1;
+            } catch (SQLException | NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
+                e.printStackTrace();
+                return 0;
+            }
+        }
+        else
+            return 2;
+    }
+
+    public static Integer updateResource(String table, Integer id, String parameter, String valueToSet) {
+        if (tableExistence(table)) {
+            try {
+                String IDname = "ID_" + table.substring(0, table.length() - 1);
+                if (resourceExistence(table, id)) {
+                    Statement stmt = connection.createStatement();
+                    String query = "UPDATE " + table + " SET " + parameter + " = '" + valueToSet + "' WHERE " + IDname + " = " + id;
+                    System.out.println(query);
+                    stmt.executeUpdate("UPDATE " + table + " SET " + parameter + " = '" + valueToSet + "' WHERE " + IDname + " = " + id);
+                    System.out.println("querying UPDATE " + table + " WHERE ID_user = " + id);
+                    return 1;
+                } else
+                    return 3;
+            } catch (SQLException e) {
+                e.printStackTrace();
+                return 0;
+            }
+        }
+        else
+            return 2;
+    }
+
+    public static Integer deleteResource(String tableName, Integer id) {
+        // 0 - format error
+        // 1 - OK
+        // 2 - table does not exist
+        // 3 - user does not exist
+        if (tableExistence(tableName)) {
+            if (resourceExistence(tableName, id)) {
+                try {
+                    String IDname = "ID_" + tableName.substring(0, tableName.length() - 1);
+                    Statement stmt = connection.createStatement();
+                    stmt.executeUpdate("DELETE FROM " + tableName + " WHERE " + IDname + " = " + id);
+                    System.out.println("querying DELETE FROM " + tableName + " WHERE " + IDname + " = " + id);
+                    return 1;
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    return 0;
                 }
             }
-
-            assert preparedStmt != null;
-            preparedStmt.execute();
-
-            System.out.println("querying INSERT INTO " + tableName);
-
-            return true;
-        } catch (SQLException | NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
-            e.printStackTrace();
-            return false;
+            return 3;
         }
+        return 2;
     }
 
-    public static boolean updateResource(String table, Integer id, String parameter, String valueToSet) {
-        try {
-            String IDname = "ID_" + table.substring(0, table.length() - 1);
-            if (resourceExistence(table, id)) {
-                Statement stmt = connection.createStatement();
-                String query = "UPDATE " + table + " SET " + parameter + " = '" + valueToSet + "' WHERE " + IDname + " = " + id;
-                System.out.println(query);
-                stmt.executeUpdate("UPDATE " + table + " SET " + parameter + " = '" + valueToSet + "' WHERE " + IDname + " = " + id);
-                System.out.println("querying UPDATE " + table + " WHERE ID_user = " + id);
-                return true;
-            } else
-                return false;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
+    /*public static Integer deleteResource(String tableName, Object filter) {
 
-    public static boolean deleteResource(String tableName, Integer id) {
-        try {
-            String IDname = "ID_" + tableName.substring(0, tableName.length() - 1);
-            Statement stmt = connection.createStatement();
-            stmt.executeUpdate("DELETE FROM " + tableName + " WHERE " + IDname + " = " + id);
-            System.out.println("querying DELETE FROM " + tableName + " WHERE " + IDname + " = " + id);
-            return true;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
+    }*/
 
     public static List<Object> parseIntoObjectObjectList(String tableName, ResultSet result) {
         try {

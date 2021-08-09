@@ -14,8 +14,13 @@ public class AppLifecycleBean {
     private static final Logger LOGGER = Logger.getLogger("ListenerBean");
 
     void onStart(@Observes StartupEvent ev) {
-        String result = DatabaseHandler.establishConnection();
-        LOGGER.info(result);
+        boolean result = DatabaseHandler.establishConnection();
+        if (result)
+            LOGGER.info("Connection established correctly.");
+        else {
+            LOGGER.info("Could not establish connection.");
+            System.exit(0);
+        }
     }
 
     /*void onStop(@Observes ShutdownEvent ev) {
