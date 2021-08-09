@@ -1,6 +1,8 @@
 package Database;
 
+import Data.Book;
 import Data.User;
+import com.google.gson.Gson;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -11,6 +13,7 @@ import java.util.List;
 
 public class DatabaseHandler {
     private static Connection connection = null;
+
     public static String establishConnection() {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
@@ -25,52 +28,89 @@ public class DatabaseHandler {
         }
     }
 
-    public static List<User> getResource(String table) {
+    public static List<Object> getResource(String tableName) {
         try {
+            System.out.println(tableName);
             Statement stmt = connection.createStatement();
-            ResultSet result = stmt.executeQuery("SELECT * FROM " + table);
-            System.out.println("querying SELECT * FROM " + table);
-            return parseIntoObjectUserList(result);
-        }
-        catch (SQLException e) {
+            ResultSet result = stmt.executeQuery("SELECT * FROM " + tableName);
+            System.out.println("querying SELECT * FROM " + tableName);
+            return parseIntoObjectObjectList(tableName, result);
+        } catch (SQLException e) {
             e.printStackTrace();
             return null;
         }
     }
 
-    public static boolean userExistence(String table, Integer id) {
+    public static boolean resourceExistence(String table, Integer id) {
         try {
+            String IDname = "ID_" + table.substring(0, table.length() - 1);
             Statement stmt = connection.createStatement();
-            ResultSet result = stmt.executeQuery("SELECT 1 FROM " + table + " WHERE ID_user = " + id);
+            ResultSet result = stmt.executeQuery("SELECT 1 FROM " + table + " WHERE " + IDname + " = " + id);
+            System.out.println("SELECT 1 FROM " + table + " WHERE " + IDname + " = " + id);
             System.out.println("quering SELECT 1 FROM " + table + " WHERE ID_user = " + id);
             return result.next();
-        }
-        catch (SQLException e) {
+        } catch (SQLException e) {
             e.printStackTrace();
             return false;
         }
     }
 
-    public static boolean addResource(String table, User newUser) {
+    public static boolean addUser(String tableName, Object object) {
+        PreparedStatement preparedStmt = null;
         try {
-            Field[] fields = User.class.getDeclaredFields();
+            if (tableName.equals("users")) {
+                Gson gson = new Gson();
+                String tmp = gson.toJson(object);
+                User newUser = gson.fromJson(tmp, User.class);
 
-            String query = "INSERT INTO " + table + " (login, email, first_name, last_name, creation_date) VALUES (?, ?, ?, ?, ?)";
-            PreparedStatement preparedStmt = connection.prepareStatement(query);
+                Field[] fields = User.class.getDeclaredFields();
 
-            for(int i = 1; i < fields.length; i++) {
-                // invoking the getter
-                Method method = User.class.getDeclaredMethod("get" + fields[i].getName().substring(0, 1).toUpperCase() + fields[i].getName().substring(1));
-                String var = (String) method.invoke(newUser);
-                preparedStmt.setString (i, var);
+                String query = "INSERT INTO " + tableName + " (login, email, first_name, last_name, creation_date) VALUES (?, ?, ?, ?, ?)";
+                preparedStmt = connection.prepareStatement(query);
+
+                for (int i = 1; i < fields.length; i++) {
+                    // invoking the getter
+                    Method method = User.class.getDeclaredMethod("get" + fields[i].getName().substring(0, 1).toUpperCase() + fields[i].getName().substring(1));
+                    String var = (String) method.invoke(newUser);
+                    preparedStmt.setString(i, var);
+                }
+            }
+            else if (tableName.equals("books")) {
+                Gson gson = new Gson();
+                String tmp = gson.toJson(object);
+                Book newBook = gson.fromJson(tmp, Book.class);
+
+                Field[] fields = Book.class.getDeclaredFields();
+
+                String query = "INSERT INTO " + tableName + " (title, author, is_taken, taken_by, taken_date, return_date) VALUES (?, ?, ?, ?, ?, ?)";
+                preparedStmt = connection.prepareStatement(query);
+
+                for (int i = 1; i < fields.length; i++) {
+                    // invoking the getter
+                    String methodName = "get" + fields[i].getName().substring(0, 1).toUpperCase() + fields[i].getName().substring(1);
+                    Method method = Book.class.getDeclaredMethod(methodName);
+
+                    String var;
+                    Boolean isTaken;
+                    if (methodName.equals("getIs_taken")) {
+                        isTaken = (Boolean) method.invoke(newBook);
+                        System.out.println(isTaken);
+                        preparedStmt.setBoolean(i, isTaken);
+                    }
+                    else {
+                        var = (String) method.invoke(newBook);
+                        preparedStmt.setString(i, var);
+                    }
+                }
             }
 
+            assert preparedStmt != null;
             preparedStmt.execute();
 
-            System.out.println("querying INSERT INTO " + table);
+            System.out.println("querying INSERT INTO " + tableName);
+
             return true;
-        }
-        catch (SQLException | NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
+        } catch (SQLException | NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
             e.printStackTrace();
             return false;
         }
@@ -78,55 +118,75 @@ public class DatabaseHandler {
 
     public static boolean updateResource(String table, Integer id, String parameter, String valueToSet) {
         try {
-            if(userExistence(table, id)) {
+            String IDname = "ID_" + table.substring(0, table.length() - 1);
+            if (resourceExistence(table, id)) {
                 Statement stmt = connection.createStatement();
-                String query = "UPDATE " + table + " SET " + parameter + " = '" + valueToSet + "' WHERE ID_user = " + id;
+                String query = "UPDATE " + table + " SET " + parameter + " = '" + valueToSet + "' WHERE " + IDname + " = " + id;
                 System.out.println(query);
-                stmt.executeUpdate("UPDATE " + table + " SET " + parameter + " = '" + valueToSet + "' WHERE ID_user = " + id);
+                stmt.executeUpdate("UPDATE " + table + " SET " + parameter + " = '" + valueToSet + "' WHERE " + IDname + " = " + id);
                 System.out.println("querying UPDATE " + table + " WHERE ID_user = " + id);
                 return true;
-            }
-            else
+            } else
                 return false;
-        }
-        catch (SQLException e) {
+        } catch (SQLException e) {
             e.printStackTrace();
             return false;
         }
     }
 
-    public static boolean deleteResource(String table, Integer id) {
+    public static boolean deleteResource(String tableName, Integer id) {
         try {
+            String IDname = "ID_" + tableName.substring(0, tableName.length() - 1);
             Statement stmt = connection.createStatement();
-            stmt.executeUpdate("DELETE FROM " + table + " WHERE ID_user = " + id);
-            System.out.println("querying DELETE FROM " + table + " WHERE ID_user = " + id);
+            stmt.executeUpdate("DELETE FROM " + tableName + " WHERE " + IDname + " = " + id);
+            System.out.println("querying DELETE FROM " + tableName + " WHERE " + IDname + " = " + id);
             return true;
-        }
-        catch (SQLException e) {
+        } catch (SQLException e) {
             e.printStackTrace();
             return false;
         }
     }
 
-    public static List<User> parseIntoObjectUserList(ResultSet result) {
+    public static List<Object> parseIntoObjectObjectList(String tableName, ResultSet result) {
         try {
             ResultSetMetaData rsmd = result.getMetaData();
             int columnsNumber = rsmd.getColumnCount();
-            List<User> listOfUsers = new ArrayList<>();
-            while (result.next()) {
-                User actualUser = new User();
-                for (int i = 1; i <= columnsNumber; i++) {
-                    String columnValue = result.getString(i);
-                    String columnName = rsmd.getColumnName(i);
-                    // invoking the setter
-                    Method method = User.class.getDeclaredMethod("set" + columnName.substring(0, 1).toUpperCase() + columnName.substring(1), String.class);
-                    method.invoke(actualUser, columnValue);
+            List<Object> listOfUsers = new ArrayList<>();
+
+            if (tableName.equals("users")) {
+                while (result.next()) {
+                    User actualUser = new User();
+                    for (int i = 1; i <= columnsNumber; i++) {
+                        String columnValue = result.getString(i);
+                        String columnName = rsmd.getColumnName(i);
+                        // invoking the setter
+                        Method method = User.class.getDeclaredMethod("set" + columnName.substring(0, 1).toUpperCase() + columnName.substring(1), String.class);
+                        method.invoke(actualUser, columnValue);
+                    }
+                    listOfUsers.add(actualUser);
                 }
-                listOfUsers.add(actualUser);
+            } else if (tableName.equals("books")) {
+                while (result.next()) {
+                    Book actualBook = new Book();
+                    for (int i = 1; i <= columnsNumber; i++) {
+                        String columnValue = result.getString(i);
+                        String columnName = rsmd.getColumnName(i);
+                        String methodName = "set" + columnName.substring(0, 1).toUpperCase() + columnName.substring(1);
+                        // invoking the setter
+                        if (!methodName.equals("setIs_taken")) {
+                            Method method = Book.class.getDeclaredMethod(methodName, String.class);
+                            method.invoke(actualBook, columnValue);
+                        }
+                        else {
+                            Method method = Book.class.getDeclaredMethod(methodName, Integer.class);
+                            method.invoke(actualBook, Integer.parseInt(columnValue));
+                        }
+                    }
+                    listOfUsers.add(actualBook);
+                }
             }
             return listOfUsers;
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
