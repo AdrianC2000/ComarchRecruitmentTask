@@ -1,14 +1,27 @@
-package Data;
+package Models;
 
+import javax.validation.constraints.Email;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Past;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 public class User {
     private Integer ID_user;
+
+    @NotBlank
     private String login;
+
+    @NotBlank
+    @Email(message = "Incorrect email format.")
     private String email;
+
+    @NotBlank
     private String first_name;
+
+    @NotBlank
     private String last_name;
+
     private String creation_date;
 
     public Integer getID_user() {

@@ -1,4 +1,4 @@
-package Data;
+package Models;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;

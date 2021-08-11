@@ -1,4 +1,4 @@
-package Data;
+package Models;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -8,7 +8,7 @@ public class Book {
     private Integer ID_book;
     private String title;
     private String author;
-    private String is_taken;
+    private Boolean is_taken;
     private String taken_by;
     private String taken_date;
     private String return_date;
@@ -37,12 +37,12 @@ public class Book {
         this.author = author;
     }
 
-    public String getIs_taken() {
+    public Boolean getIs_taken() {
         return is_taken;
     }
 
-    public void setIs_taken(String is_taken) {
-        this.is_taken = is_taken;
+    public void setIs_taken(Integer is_taken) {
+        this.is_taken = is_taken == 1;
     }
 
     public String getTaken_by() {
@@ -72,7 +72,10 @@ public class Book {
     public String allMethodsGetter(String methodName, Book requirements) {
         try {
             Method method = Book.class.getDeclaredMethod(methodName);
-            return (String) method.invoke(requirements);
+            if (!methodName.contains("Is"))
+                return (String) method.invoke(requirements);
+            else
+                return (Boolean) method.invoke(requirements) ? "true" : "false";
         }
         catch (InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
             return null;

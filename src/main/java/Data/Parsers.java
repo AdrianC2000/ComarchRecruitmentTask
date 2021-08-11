@@ -1,9 +1,11 @@
-package Database;
+package Data;
 
-import Data.Book;
-import Data.User;
+import Models.Book;
+import Models.User;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -38,8 +40,14 @@ public class Parsers {
                         String columnName = rsmd.getColumnName(i);
                         String methodName = "set" + columnName.substring(0, 1).toUpperCase() + columnName.substring(1);
                         // invoking the setter
-                        Method method = Book.class.getDeclaredMethod(methodName, String.class);
-                        method.invoke(actualBook, columnValue);
+                        if (!methodName.contains("Is")) {
+                            Method method = Book.class.getDeclaredMethod(methodName, String.class);
+                            method.invoke(actualBook, columnValue);
+                        }
+                        else {
+                            Method method = Book.class.getDeclaredMethod(methodName, Integer.class);
+                            method.invoke(actualBook, Integer.parseInt(columnValue));
+                        }
                     }
                     listOfUsers.add(actualBook);
                 }
@@ -52,13 +60,13 @@ public class Parsers {
     }
 
     public static User parseObjectIntoUser(Object object) {
-        Gson gson = new Gson();
+        Gson gson = new GsonBuilder().serializeNulls().create();
         String tmp = gson.toJson(object);
         return gson.fromJson(tmp, User.class);
     }
 
     public static Object parseUserIntoObject(User user) {
-        Gson gson = new Gson();
+        Gson gson = new GsonBuilder().serializeNulls().create();
         String tmp = gson.toJson(user);
         return gson.fromJson(tmp, Object.class);
     }
@@ -82,13 +90,13 @@ public class Parsers {
     }
 
     public static Book parseObjectIntoBook(Object object) {
-        Gson gson = new Gson();
+        Gson gson = new GsonBuilder().serializeNulls().create();
         String tmp = gson.toJson(object);
         return gson.fromJson(tmp, Book.class);
     }
 
     public static Object parseBookIntoObject(Book book) {
-        Gson gson = new Gson();
+        Gson gson = new GsonBuilder().serializeNulls().create();
         String tmp = gson.toJson(book);
         return gson.fromJson(tmp, Object.class);
     }
@@ -109,5 +117,19 @@ public class Parsers {
             listObject.add(newObject);
         }
         return listObject;
+    }
+
+    public static ArrayList<String> parseFieldsArrayIntoStringList(Field[] fields) {
+        ArrayList<String> stringList = new ArrayList<>();
+        for (Field field : fields) {
+            stringList.add(field.getName());
+        }
+        return stringList;
+    }
+
+    public static String resourceName(String tableName) {
+        // Example: tableName: users, resourceName = User
+        String resource = tableName.substring(0, tableName.length() - 1);
+        return resource.substring(0, 1).toUpperCase() + resource.substring(1);
     }
 }

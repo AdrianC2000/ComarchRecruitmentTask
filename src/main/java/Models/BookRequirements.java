@@ -1,14 +1,11 @@
-package Data;
-
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+package Models;
 
 public class BookRequirements {
 
     private Integer[] ID_book;
     private String[] title;
     private String[] author;
-    private String[] is_taken;
+    private Boolean[] is_taken;
     private String[] taken_by;
     private String[] taken_date;
     private String[] return_date;
@@ -37,11 +34,11 @@ public class BookRequirements {
         this.author = author;
     }
 
-    public String[] getIs_taken() {
+    public Boolean[] getIs_taken() {
         return is_taken;
     }
 
-    public void setIs_taken(String[] is_taken) {
+    public void setIs_taken(Boolean[] is_taken) {
         this.is_taken = is_taken;
     }
 

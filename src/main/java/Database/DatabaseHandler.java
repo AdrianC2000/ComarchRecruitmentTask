@@ -1,18 +1,17 @@
 package Database;
 
-import Data.Book;
-import Data.BookRequirements;
-import Data.User;
-import Data.UserRequirements;
+import Data.Parsers;
+import Data.ReturnMessage;
+import Data.Validators;
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.Set;
 
 public class DatabaseHandler {
     private static Connection connection = null;
@@ -31,251 +30,82 @@ public class DatabaseHandler {
         }
     }
 
-    public static List<Object> getResource(String tableName) {
+    public static ReturnMessage getResource(String tableName) {
         try {
+            System.out.println(tableName);
             Statement stmt = connection.createStatement();
             ResultSet result = stmt.executeQuery("SELECT * FROM " + tableName);
             System.out.println("querying SELECT * FROM " + tableName);
-            return Parsers.parseIntoObjectList(tableName, result);
+            return new ReturnMessage(" ", Parsers.parseIntoObjectList(tableName, result), true);
         } catch (SQLException e) {
             e.printStackTrace();
-            return null;
+            return new ReturnMessage("Table '" + tableName + "' does not exist.", null, false);
         }
     }
 
-    public static boolean resourceExistence(String table, Integer id) {
-        try {
-            String IDname = "ID_" + table.substring(0, table.length() - 1);
-            Statement stmt = connection.createStatement();
-            ResultSet result = stmt.executeQuery("SELECT 1 FROM " + table + " WHERE " + IDname + " = " + id);
-            System.out.println("quering SELECT 1 FROM " + table + " WHERE ID_user = " + id);
-            return result.next();
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
-
-    public static boolean tableExistence(String table) {
-        try {
-            Statement stmt = connection.createStatement();
-            ResultSet result = stmt.executeQuery("SELECT 1 FROM " + table);
-            System.out.println("SELECT 1 FROM " + table);
-            return result.next();
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
-
-    public static Integer addResource(String tableName, Object object) {
-        PreparedStatement preparedStmt = null;
-        if (tableExistence(tableName)) {
-            try {
-                if (tableName.equals("users")) {
-                    Gson gson = new Gson();
-                    String tmp = gson.toJson(object);
-                    User newUser = gson.fromJson(tmp, User.class);
-
-                    Field[] fields = User.class.getDeclaredFields();
-
-                    String query = "INSERT INTO " + tableName + " (login, email, first_name, last_name, creation_date) VALUES (?, ?, ?, ?, ?)";
-                    preparedStmt = connection.prepareStatement(query);
-
-                    for (int i = 1; i < fields.length; i++) {
-                        // invoking the getter
-                        Method method = User.class.getDeclaredMethod("get" + fields[i].getName().substring(0, 1).toUpperCase() + fields[i].getName().substring(1));
-                        String var = (String) method.invoke(newUser);
-                        preparedStmt.setString(i, var);
-                    }
-                } else if (tableName.equals("books")) {
-                    Gson gson = new Gson();
-                    String tmp = gson.toJson(object);
-                    Book newBook = gson.fromJson(tmp, Book.class);
-
-                    Field[] fields = Book.class.getDeclaredFields();
-
-                    String query = "INSERT INTO " + tableName + " (title, author, is_taken, taken_by, taken_date, return_date) VALUES (?, ?, ?, ?, ?, ?)";
-                    preparedStmt = connection.prepareStatement(query);
-
-                    for (int i = 1; i < fields.length; i++) {
-                        // invoking the getter
-                        String methodName = "get" + fields[i].getName().substring(0, 1).toUpperCase() + fields[i].getName().substring(1);
-                        Method method = Book.class.getDeclaredMethod(methodName);
-
-                        String var;
-                        Boolean isTaken;
-                        if (methodName.equals("getIs_taken")) {
-                            isTaken = (Boolean) method.invoke(newBook);
-                            preparedStmt.setBoolean(i, isTaken);
-                        } else {
-                            var = (String) method.invoke(newBook);
-                            preparedStmt.setString(i, var);
-                        }
-                    }
-                }
-
-                assert preparedStmt != null;
-                preparedStmt.execute();
-
-                System.out.println("querying INSERT INTO " + tableName);
-
-                return 1;
-            } catch (SQLException | NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
-                e.printStackTrace();
-                return 0;
+    public static ReturnMessage addResource(String tableName, Object object) {
+        if (Validators.tableExistence(tableName, connection)) {
+            if (tableName.equals("users")) {
+                return DatabaseHandlerUser.addResourceUser(tableName, object, connection);
+            } else if (tableName.equals("books")) {
+                return DatabaseHandlerBook.addResourceBook(tableName, object, connection);
             }
-        } else
-            return 2;
+        }
+        return new ReturnMessage("Error: Table with the name " + tableName + " does not exsits.", null, false);
     }
 
-    public static Integer updateResource(String table, Integer id, String parameter, String valueToSet) {
-        if (tableExistence(table)) {
+    public static ReturnMessage updateResource(String tableName, Integer id, String parameter, String valueToSet) {
+        if (Validators.tableExistence(tableName, connection)) {
             try {
-                String IDname = "ID_" + table.substring(0, table.length() - 1);
-                if (resourceExistence(table, id)) {
+                String IDname = "ID_" + tableName.substring(0, tableName.length() - 1);
+                if (Validators.resourceExistence(tableName, id, connection)) {
                     Statement stmt = connection.createStatement();
-                    stmt.executeUpdate("UPDATE " + table + " SET " + parameter + " = '" + valueToSet + "' WHERE " + IDname + " = " + id);
-                    System.out.println("querying UPDATE " + table + " WHERE ID_user = " + id);
-                    return 1;
+                    String query = "UPDATE " + tableName + " SET " + parameter + " = '" + valueToSet + "' WHERE " + IDname + " = " + id;
+                    System.out.println(query);
+                    stmt.executeUpdate("UPDATE " + tableName + " SET " + parameter + " = '" + valueToSet + "' WHERE " + IDname + " = " + id);
+                    System.out.println("querying UPDATE " + tableName + " WHERE ID_user = " + id);
+                    return new ReturnMessage("Parameter " + parameter + " changed for " + valueToSet + " for " + Parsers.resourceName(tableName).toLowerCase() + " with the id " + id + " correctly.", null, true);
                 } else
-                    return 3;
+                    return new ReturnMessage(Parsers.resourceName(tableName) + " with id " + id + " does not exist.", null, false);
+
             } catch (SQLException e) {
-                e.printStackTrace();
-                return 0;
+                return new ReturnMessage("Error: Unknown field name '" + parameter + "'.", null, false);
             }
         } else
-            return 2;
+            return new ReturnMessage(tableName + " table does not exist.", null, false);
     }
 
-    public static Integer deleteResource(String tableName, Integer id) {
-        // 0 - format error
-        // 1 - OK
-        // 2 - table does not exist
-        // 3 - user does not exist
-        if (tableExistence(tableName)) {
-            if (resourceExistence(tableName, id)) {
+    public static ReturnMessage deleteResource(String tableName, Integer id) {
+        if (Validators.tableExistence(tableName, connection)) {
+            if (Validators.resourceExistence(tableName, id, connection)) {
                 try {
                     String IDname = "ID_" + tableName.substring(0, tableName.length() - 1);
                     Statement stmt = connection.createStatement();
                     stmt.executeUpdate("DELETE FROM " + tableName + " WHERE " + IDname + " = " + id);
                     System.out.println("querying DELETE FROM " + tableName + " WHERE " + IDname + " = " + id);
-                    return 1;
+                    return new ReturnMessage("User with the id " + id + " deleted correctly.", null, true);
                 } catch (SQLException e) {
-                    e.printStackTrace();
-                    return 0;
+                    return new ReturnMessage("Error: " + e.getMessage(), null, false);
                 }
             }
-            return 3;
+            return new ReturnMessage(Parsers.resourceName(tableName) +
+                    " with the id " + id + " does not exist.", null, false);
         }
-        return 2;
+        return new ReturnMessage("'" + tableName + "' table does not exist.", null, false);
     }
 
-    public static List<Object> filterResource(String tableName, Object object) {
-        if (tableExistence(tableName)) {
-            try {
-                if (tableName.equals("users")) {
-                    // Getting all the records
-                    List<Object> allRecordsObject = getResource(tableName);
-                    List<User> allRecordsUser = Parsers.parseListObjectIntoListUser(allRecordsObject);
-
-                    // Getting all the requirements
-                    Gson gson = new Gson();
-                    String tmp = gson.toJson(object);
-                    UserRequirements allRequirements = gson.fromJson(tmp, UserRequirements.class);
-
-                    // Separating signs from variables
-                    ArrayList<String> variables = new ArrayList<>();
-                    ArrayList<String> parametersGettersNames = new ArrayList<>();
-
-                    Field[] fields = UserRequirements.class.getDeclaredFields();
-
-                    for (Field field : fields) {
-                        // invoking the getter
-                        String methodName = "get" + field.getName().substring(0, 1).toUpperCase() + field.getName().substring(1);
-                        Method method = UserRequirements.class.getDeclaredMethod(methodName);
-                        String[] var = (String[]) method.invoke(allRequirements);
-                        if (var != null) {
-                            for (String j : var) {
-                                variables.add(j);
-                                parametersGettersNames.add(methodName);
-                            }
-                        }
-                    }
-
-                    List<User> allRecordsFiltered = new ArrayList<>();
-                    List<User> tempRecordsFiltered;
-
-                    for (int i = 0; i < variables.size(); i++) {
-                        String var = variables.get(i);
-                        String param = parametersGettersNames.get(i);
-
-                        tempRecordsFiltered = allRecordsUser.stream()
-                                .filter(user -> user.allMethodsGetter(param, user).equals(var))
-                                .collect(Collectors.toList());
-                        for (User user : tempRecordsFiltered) {
-                            if (!allRecordsFiltered.contains(user))
-                                allRecordsFiltered.add(user);
-                        }
-                    }
-
-                    return Parsers.parseListUserIntoListObject(allRecordsFiltered);
-
-                } else if (tableName.equals("books")) {
-                    // Getting all the records
-                    List<Object> allRecordsObject = getResource(tableName);
-                    List<Book> allRecordsUser = Parsers.parseListObjectIntoListBook(allRecordsObject);
-
-                    // Getting all the requirements
-                    Gson gson = new Gson();
-                    String tmp = gson.toJson(object);
-                    BookRequirements allRequirements = gson.fromJson(tmp, BookRequirements.class);
-
-                    // Separating signs from variables
-                    ArrayList<String> variables = new ArrayList<>();
-                    ArrayList<String> parametersGettersNames = new ArrayList<>();
-
-                    Field[] fields = BookRequirements.class.getDeclaredFields();
-
-                    for (Field field : fields) {
-                        // invoking the getter
-                        String methodName = "get" + field.getName().substring(0, 1).toUpperCase() + field.getName().substring(1);
-                        Method method = BookRequirements.class.getDeclaredMethod(methodName);
-                        String[] var = (String[]) method.invoke(allRequirements);
-                        if (var != null) {
-                            for (String j : var) {
-                                variables.add(j);
-                                parametersGettersNames.add(methodName);
-                            }
-                        }
-                    }
-
-                    List<Book> allRecordsFiltered = new ArrayList<>();
-                    List<Book> tempRecordsFiltered;
-
-                    for (int i = 0; i < variables.size(); i++) {
-                        String var = variables.get(i);
-                        String param = parametersGettersNames.get(i);
-
-                        tempRecordsFiltered = allRecordsUser.stream()
-                                .filter(book -> book.allMethodsGetter(param, book).equals(var))
-                                .collect(Collectors.toList());
-                        for (Book book : tempRecordsFiltered) {
-                            if (!allRecordsFiltered.contains(book))
-                                allRecordsFiltered.add(book);
-                        }
-                    }
-                    return Parsers.parseListBookIntoListObject(allRecordsFiltered);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                return null;
-            }
+    public static ReturnMessage filterResource(String tableName, Object object, String logic) {
+        if (Validators.tableExistence(tableName, connection)) {
+            if (tableName.equals("users")) {
+                return DatabaseHandlerUser.filterUser(tableName, object, logic);
+            } else if (tableName.equals("books"))
+                return DatabaseHandlerBook.filterBook(tableName, object, logic);
         }
-        return null;
+        return new ReturnMessage("'" + tableName + "' table does not exist.", null, false);
     }
 
     public static String closeConnection() {
+        // LEAVE THIS HERE
         try {
             connection.close();
             return "Connection closed correctly.";

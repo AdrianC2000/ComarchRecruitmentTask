@@ -2,40 +2,35 @@
 
 package org.acme;
 
+import Data.ReturnMessage;
 import Database.DatabaseHandler;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.List;
 
 @Path("/{tableName}")
 public class UniversalResource {
+
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Response getRecords(@PathParam("tableName") String tableName) {
-        List<Object> resources = DatabaseHandler.getResource(tableName);
-        if (resources != null)
-            return Response.ok(resources).build();
+        ReturnMessage response = DatabaseHandler.getResource(tableName);
+        if (response.isValid())
+            return Response.ok(response.getResult()).build();
         else
-            return Response.status(Response.Status.BAD_REQUEST).entity("Table '" + tableName + "' does not exist.").build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(response.getMessage()).build();
     }
 
     @POST
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     public Response createResource(@PathParam("tableName") String tableName, Object newObject) {
-        int added = DatabaseHandler.addResource(tableName, newObject);
-        switch (added) {
-            case 1:
-                return Response.ok("Resource added correctly.").build();
-            case 2:
-                return Response.status(Response.Status.BAD_REQUEST).entity(
-                        tableName + " table does not exist.").build();
-            default:
-                return Response.status(Response.Status.BAD_REQUEST).entity(
-                        "Incorrect format of data. Please check swagger.com for the correct format of input data.").build();
-        }
+        ReturnMessage response = DatabaseHandler.addResource(tableName, newObject);
+        if (response.isValid())
+            return Response.ok(response.getMessage()).build();
+        else
+            return Response.status(Response.Status.BAD_REQUEST).entity(response.getMessage()).build();
     }
 
     @PUT
@@ -47,21 +42,12 @@ public class UniversalResource {
             @PathParam("id") Integer id,
             @PathParam("parameterToChange") String param,
             @QueryParam("value") String valueToSet) {
-        System.out.println("id = " + id + ", parameterToChange = " + param + ", valueToSet = " + valueToSet);
-        int updated = DatabaseHandler.updateResource(tableName, id, param, valueToSet);
-        switch(updated) {
-            case 1:
-                return Response.ok("Parameter " + param + " changed for " + valueToSet + " for " + resourceName(tableName).toLowerCase() + " with the id " + id + " correctly.").build();
-            case 2:
-                return Response.status(Response.Status.BAD_REQUEST).entity(
-                        tableName + " table does not exist.").build();
-            case 3:
-                return Response.status(Response.Status.BAD_REQUEST).entity(
-                        resourceName(tableName) + " with id " + id + " does not exist.").build();
-            default:
-                return Response.status(Response.Status.BAD_REQUEST).entity(
-                        "Incorrect format of data. Please check swagger.com for the correct format of input data.").build();
+        ReturnMessage response = DatabaseHandler.updateResource(tableName, id, param, valueToSet);
+        if (response.isValid()) {
+            return Response.ok(response.getMessage()).build();
         }
+        else
+            return Response.status(Response.Status.BAD_REQUEST).entity(response.getMessage()).build();
     }
 
     @DELETE
@@ -71,41 +57,23 @@ public class UniversalResource {
     public Response deleteResource(
             @PathParam("tableName") String tableName,
             @PathParam("id") Integer id) {
-        int removed = DatabaseHandler.deleteResource(tableName, id);
-        switch (removed) {
-            case 1:
-                return Response.ok("User with the id " + id + " deleted correctly.").build();
-            case 2:
-                return Response.status(Response.Status.BAD_REQUEST).entity(
-                        "'" + tableName + "' table does not exist.").build();
-            case 3:
-                return Response.status(Response.Status.BAD_REQUEST).entity(
-                        resourceName(tableName) +
-                                " with the id " + id + " does not exist.").build();
-            default:
-                return Response.status(Response.Status.BAD_REQUEST).entity(
-                        "Incorrect format of data. Please check swagger.com for the correct format of input data.").build();
-        }
-    }
-
-    private String resourceName(String tableName) {
-        String resource = tableName.substring(0, tableName.length() - 1);
-        return resource.substring(0, 1).toUpperCase() + resource.substring(1);
+        ReturnMessage response = DatabaseHandler.deleteResource(tableName, id);
+        if (response.isValid())
+            return Response.ok(response.getMessage()).build();
+        else
+            return Response.status(Response.Status.BAD_REQUEST).entity(
+                    response.getMessage()).build();
     }
 
     @POST
-    @Path("/filter")
+    @Path("/filter/{logic}")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response filterResources(@PathParam("tableName") String tableName, Object newObject) {
-
-        List<Object> resources = DatabaseHandler.filterResource(tableName, newObject);
-        if (resources == null)
-            return Response.status(Response.Status.BAD_REQUEST).entity(
-                    "Incorrect format of data. Please check swagger.com for the correct format of input data.").build();
-        else if (resources.isEmpty())
-            return Response.ok("No entries with the given criteria.").build();
+    public Response filterResources(@PathParam("tableName") String tableName, @PathParam("logic") String logic, Object newObject) {
+        ReturnMessage response = DatabaseHandler.filterResource(tableName, newObject, logic);
+        if (response.isValid())
+            return Response.ok(response.getResult()).build();
         else
-            return Response.ok(resources).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(response.getMessage()).build();
     }
 }
