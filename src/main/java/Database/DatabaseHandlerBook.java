@@ -7,6 +7,7 @@ import Models.Book;
 import Models.BookRequirements;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import org.gradle.internal.impldep.org.apache.commons.lang.builder.ReflectionToStringBuilder;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -29,7 +30,7 @@ public class DatabaseHandlerBook {
         if (areFieldsValid) {
             PreparedStatement preparedStmt = null;
             try {
-                Gson gson = new Gson();
+                Gson gson = new GsonBuilder().serializeNulls().setDateFormat("yyyy-MM-dd").create();
                 String tmp = gson.toJson(object);
                 Book newBook = gson.fromJson(tmp, Book.class);
 
@@ -45,7 +46,6 @@ public class DatabaseHandlerBook {
                     Boolean isTaken;
                     if (methodName.equals("getIs_taken")) {
                         isTaken = (Boolean) method.invoke(newBook);
-                        System.out.println(isTaken);
                         preparedStmt.setBoolean(i, isTaken);
                     } else {
                         var = (String) method.invoke(newBook);
@@ -79,45 +79,25 @@ public class DatabaseHandlerBook {
                 Gson gson = new Gson();
                 String tmp = gson.toJson(object);
                 BookRequirements allRequirements = gson.fromJson(tmp, BookRequirements.class);
-                System.out.println(tmp);
 
                 // Separating signs from variables
                 ArrayList<String> variables = new ArrayList<>();
                 ArrayList<String> parametersGettersNames = new ArrayList<>();
 
-                System.out.println(Arrays.toString(fields));
-
                 for (Field field : fields) {
                     // invoking the getter
                     String methodName = "get" + field.getName().substring(0, 1).toUpperCase() + field.getName().substring(1);
                     Method method = BookRequirements.class.getDeclaredMethod(methodName);
-                    System.out.println(method.getName());
-                    System.out.println(method);
 
                     String[] var;
-                    Boolean[] isTaken;
-                    if (methodName.equals("getIs_taken")) {
-                        isTaken = (Boolean[]) method.invoke(allRequirements);
-                        if (isTaken != null) {
-                            for (Boolean j : isTaken) {
-                                variables.add(j ? "true" : "false");
-                                parametersGettersNames.add(methodName);
-                                System.out.println(j + " " + methodName);
-                            }
-                        }
-                    } else {
                         var = (String[]) method.invoke(allRequirements);
-                        System.out.println(Arrays.toString(var));
                         if (var != null) {
                             for (String j : var) {
                                 variables.add(j);
                                 parametersGettersNames.add(methodName);
-                                System.out.println(j + " " + methodName);
                             }
                         }
                     }
-                }
-
 
                 if (logic.equals("AND"))
                     return new ReturnMessage("OK", filterBookAnd(variables, parametersGettersNames, allRecordsBook), true);
@@ -147,19 +127,6 @@ public class DatabaseHandlerBook {
 
         allRecordsBook.sort(Comparator.comparing(Book::getID_book));
 
-        for (Book book : allRecordsBook) {
-            Gson gson = new GsonBuilder().serializeNulls().create();
-            String tmp = gson.toJson(book);
-            System.out.println(tmp);
-        }
-
-        List<Object> objects = Parsers.parseListBookIntoListObject(allRecordsBook);
-        for (Object object : objects) {
-            Gson gson = new Gson();
-            String tmp = gson.toJson(object);
-            System.out.println(tmp);
-        }
-
         return Parsers.parseListBookIntoListObject(allRecordsBook);
     }
 
@@ -170,7 +137,6 @@ public class DatabaseHandlerBook {
         for (int i = 0; i < variables.size(); i++) {
             String var = variables.get(i);
             String param = parametersGettersNames.get(i);
-            System.out.println(var + " " + param);
             tempRecordsFiltered = allRecordsBook.stream()
                     .filter(book -> book.allMethodsGetter(param, book).equals(var))
                     .collect(Collectors.toList());

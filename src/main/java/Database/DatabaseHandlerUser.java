@@ -5,9 +5,8 @@ import Data.ReturnMessage;
 import Data.Validators;
 import Models.User;
 import Models.UserRequirements;
-import com.google.gson.Gson;
+import com.google.gson.*;
 
-import javax.validation.Valid;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -27,9 +26,8 @@ public class DatabaseHandlerUser {
             PreparedStatement preparedStmt = null;
             try {
 
-                Gson gson = new Gson();
+                Gson gson = new GsonBuilder().serializeNulls().setDateFormat("yyyy-MM-dd").create();
                 String tmp = gson.toJson(object);
-                System.out.println(tmp);
 
                 User newUser = gson.fromJson(tmp, User.class);
 
@@ -38,7 +36,8 @@ public class DatabaseHandlerUser {
 
                 for (int i = 1; i < fields.length; i++) {
                     // invoking the getter
-                    Method method = User.class.getDeclaredMethod("get" + fields[i].getName().substring(0, 1).toUpperCase() + fields[i].getName().substring(1));
+                    String methodName = "get" + fields[i].getName().substring(0, 1).toUpperCase() + fields[i].getName().substring(1);
+                    Method method = User.class.getDeclaredMethod(methodName);
                     String var = (String) method.invoke(newUser);
                     preparedStmt.setString(i, var);
                 }
@@ -70,27 +69,21 @@ public class DatabaseHandlerUser {
                 Gson gson = new Gson();
                 String tmp = gson.toJson(object);
                 UserRequirements allRequirements = gson.fromJson(tmp, UserRequirements.class);
-                System.out.println(tmp);
 
                 // Separating signs from variables
                 ArrayList<String> variables = new ArrayList<>();
                 ArrayList<String> parametersGettersNames = new ArrayList<>();
 
-                System.out.println(Arrays.toString(fields));
 
                 for (Field field : fields) {
                     // invoking the getter
                     String methodName = "get" + field.getName().substring(0, 1).toUpperCase() + field.getName().substring(1);
                     Method method = UserRequirements.class.getDeclaredMethod(methodName);
-                    System.out.println(method.getName());
-                    System.out.println(method);
                     String[] var = (String[]) method.invoke(allRequirements);
-                    System.out.println(Arrays.toString(var));
                     if (var != null) {
                         for (String j : var) {
-                            variables.add(j);
+                            variables.add(j.toString());
                             parametersGettersNames.add(methodName);
-                            System.out.println(j + " " + methodName);
                         }
                     }
                 }
@@ -115,13 +108,13 @@ public class DatabaseHandlerUser {
         for (int i = 0; i < variables.size(); i++) {
             String var = variables.get(i);
             String param = parametersGettersNames.get(i);
-
             allRecordsUser = allRecordsUser.stream()
                     .filter(user -> user.allMethodsGetter(param, user).equals(var))
                     .collect(Collectors.toList());
+
         }
 
-        allRecordsUser.sort(Comparator.comparing(User::getID_user));
+        allRecordsUser.sort(Comparator.comparing(User::takeID_userInt));
 
         return Parsers.parseListUserIntoListObject(allRecordsUser);
     }
@@ -133,8 +126,6 @@ public class DatabaseHandlerUser {
         for (int i = 0; i < variables.size(); i++) {
             String var = variables.get(i);
             String param = parametersGettersNames.get(i);
-            System.out.println(var + " " + param);
-            User user1 = allRecordsUser.get(0);
             tempRecordsFiltered = allRecordsUser.stream()
                     .filter(user -> user.allMethodsGetter(param, user).equals(var))
                     .collect(Collectors.toList());
@@ -144,7 +135,7 @@ public class DatabaseHandlerUser {
             }
         }
 
-        allRecordsFiltered.sort(Comparator.comparing(User::getID_user));
+        allRecordsFiltered.sort(Comparator.comparing(User::takeID_userInt));
 
         return Parsers.parseListUserIntoListObject(allRecordsFiltered);
     }

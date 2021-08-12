@@ -4,19 +4,22 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 public class UserRequirements {
-    private Integer[] ID_user;
+    private String[] ID_user;
     private String[] login;
     private String[] email;
     private String[] first_name;
     private String[] last_name;
     private String[] creation_date;
 
-    public Integer[] getID_user() {
+    public String[] getID_user() {
         return ID_user;
     }
 
     public void setID_user(Integer[] ID_user) {
-        this.ID_user = ID_user;
+        String[] stringArrayID = new String[ID_user.length];
+        for (int i = 0; i < stringArrayID.length; i++)
+            stringArrayID[i] = (ID_user[i]).toString();
+        this.ID_user = stringArrayID;
     }
 
     public String[] getLogin() {

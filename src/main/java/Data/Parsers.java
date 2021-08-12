@@ -2,13 +2,17 @@ package Data;
 
 import Models.Book;
 import Models.User;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import com.google.gson.*;
+import org.gradle.internal.impldep.org.apache.commons.lang.builder.ReflectionToStringBuilder;
+import org.jboss.resteasy.spi.UnhandledException;
 
+import javax.validation.ValidationException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
+import java.sql.SQLOutput;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,14 +44,8 @@ public class Parsers {
                         String columnName = rsmd.getColumnName(i);
                         String methodName = "set" + columnName.substring(0, 1).toUpperCase() + columnName.substring(1);
                         // invoking the setter
-                        if (!methodName.contains("Is")) {
-                            Method method = Book.class.getDeclaredMethod(methodName, String.class);
-                            method.invoke(actualBook, columnValue);
-                        }
-                        else {
-                            Method method = Book.class.getDeclaredMethod(methodName, Integer.class);
-                            method.invoke(actualBook, Integer.parseInt(columnValue));
-                        }
+                        Method method = Book.class.getDeclaredMethod(methodName, String.class);
+                        method.invoke(actualBook, columnValue);
                     }
                     listOfUsers.add(actualBook);
                 }
@@ -60,15 +58,36 @@ public class Parsers {
     }
 
     public static User parseObjectIntoUser(Object object) {
-        Gson gson = new GsonBuilder().serializeNulls().create();
-        String tmp = gson.toJson(object);
-        return gson.fromJson(tmp, User.class);
+        try {
+            Gson gson = new GsonBuilder().serializeNulls().setDateFormat("yyyy-MM-dd").create();
+            String tmp = gson.toJson(object);
+            return gson.fromJson(tmp, User.class);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            throw new ValidationException("Wrong date format.");
+        }
     }
 
     public static Object parseUserIntoObject(User user) {
-        Gson gson = new GsonBuilder().serializeNulls().create();
-        String tmp = gson.toJson(user);
-        return gson.fromJson(tmp, Object.class);
+        try {
+            Gson gson = new GsonBuilder().
+                    registerTypeAdapter(Double.class,  new JsonSerializer<Double>() {
+                        @Override
+                        public JsonElement serialize(Double src, Type typeOfSrc, JsonSerializationContext context) {
+                            if(src == src.longValue())
+                                return new JsonPrimitive(src.longValue());
+                            return new JsonPrimitive(src);
+                        }
+
+                    }).serializeNulls().setDateFormat("yyyy-MM-dd").create();
+            String tmp = gson.toJson(user);
+            return gson.fromJson(tmp, Object.class);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            throw new ValidationException("Wrong date format.");
+        }
     }
 
     public static List<User> parseListObjectIntoListUser(List<Object> listObject) {
@@ -90,13 +109,18 @@ public class Parsers {
     }
 
     public static Book parseObjectIntoBook(Object object) {
-        Gson gson = new GsonBuilder().serializeNulls().create();
-        String tmp = gson.toJson(object);
-        return gson.fromJson(tmp, Book.class);
+        try {
+            Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd").serializeNulls().create();
+            String tmp = gson.toJson(object);
+            return gson.fromJson(tmp, Book.class);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new ValidationException("Wrong date format.");
+        }
     }
 
     public static Object parseBookIntoObject(Book book) {
-        Gson gson = new GsonBuilder().serializeNulls().create();
+        Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd").serializeNulls().create();
         String tmp = gson.toJson(book);
         return gson.fromJson(tmp, Object.class);
     }

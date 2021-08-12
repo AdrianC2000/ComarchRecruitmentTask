@@ -1,8 +1,11 @@
 package Data;
 
+import Models.User;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import javax.enterprise.context.ApplicationScoped;
+import javax.validation.Valid;
 import java.lang.reflect.Type;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -12,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.Set;
 
+@ApplicationScoped
 public class Validators {
 
     public static boolean resourceExistence(String table, Integer id, Connection connection) {
@@ -19,7 +23,6 @@ public class Validators {
             String IDname = "ID_" + table.substring(0, table.length() - 1);
             Statement stmt = connection.createStatement();
             ResultSet result = stmt.executeQuery("SELECT 1 FROM " + table + " WHERE " + IDname + " = " + id);
-            System.out.println("SELECT 1 FROM " + table + " WHERE " + IDname + " = " + id);
             System.out.println("quering SELECT 1 FROM " + table + " WHERE ID_user = " + id);
             return result.next();
         } catch (SQLException e) {
@@ -43,7 +46,6 @@ public class Validators {
     public static boolean fieldsValidation (Object object, ArrayList<String> fields) {
         Gson gson = new Gson();
         String tmp = gson.toJson(object);
-        System.out.println(tmp);
 
         Type type = new TypeToken<Map<String, Object>>(){}.getType();
         Map<String,Object> map = gson.fromJson(tmp, type);
@@ -55,6 +57,9 @@ public class Validators {
                 return false;
         }
         return true;
+    }
+
+    public void validateUser(@Valid User user) {
     }
 
 }

@@ -3,15 +3,8 @@ package Database;
 import Data.Parsers;
 import Data.ReturnMessage;
 import Data.Validators;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Type;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.Set;
 
 public class DatabaseHandler {
     private static Connection connection = null;
@@ -44,6 +37,7 @@ public class DatabaseHandler {
     }
 
     public static ReturnMessage addResource(String tableName, Object object) {
+        System.out.println("Tutaj jestem: addResource");
         if (Validators.tableExistence(tableName, connection)) {
             if (tableName.equals("users")) {
                 return DatabaseHandlerUser.addResourceUser(tableName, object, connection);
@@ -69,7 +63,10 @@ public class DatabaseHandler {
                     return new ReturnMessage(Parsers.resourceName(tableName) + " with id " + id + " does not exist.", null, false);
 
             } catch (SQLException e) {
-                return new ReturnMessage("Error: Unknown field name '" + parameter + "'.", null, false);
+                if (parameter.contains("ID"))
+                    return new ReturnMessage("You can't edit the ID field.", null, false);
+                e.printStackTrace();
+                return new ReturnMessage("Error: Wrong parameter.", null, false);
             }
         } else
             return new ReturnMessage(tableName + " table does not exist.", null, false);
@@ -105,7 +102,6 @@ public class DatabaseHandler {
     }
 
     public static String closeConnection() {
-        // LEAVE THIS HERE
         try {
             connection.close();
             return "Connection closed correctly.";
