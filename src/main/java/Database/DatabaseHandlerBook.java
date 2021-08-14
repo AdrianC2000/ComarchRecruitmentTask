@@ -26,7 +26,7 @@ public class DatabaseHandlerBook {
     public static ReturnMessage addResourceBook(String tableName, Object object, Connection connection) {
         Field[] fields = Book.class.getDeclaredFields();
         ArrayList<String> fieldsList = Parsers.parseFieldsArrayIntoStringList(fields);
-        boolean areFieldsValid = Validators.fieldsValidation(object, fieldsList);
+        boolean areFieldsValid = Validators.fieldsValidation(object, fieldsList, "add");
         if (areFieldsValid) {
             PreparedStatement preparedStmt = null;
             try {
@@ -48,7 +48,15 @@ public class DatabaseHandlerBook {
                         isTaken = (Boolean) method.invoke(newBook);
                         preparedStmt.setBoolean(i, isTaken);
                     } else {
-                        var = (String) method.invoke(newBook);
+                        try {
+                            var = method.invoke(newBook).toString();
+                        } catch (NullPointerException e) {
+                            var = null;
+                        }
+                        if (methodName.equals("getTaken_by") && var != null) {
+                            if (!Validators.resourceExistence("users", Integer.parseInt(var), connection))
+                                throw new SQLException("User with given ID does not exist.");
+                        }
                         preparedStmt.setString(i, var);
                     }
                 }
@@ -58,17 +66,16 @@ public class DatabaseHandlerBook {
                 System.out.println("querying INSERT INTO " + tableName);
                 return new ReturnMessage("Resource added correctly.", null, true);
             } catch (SQLException | NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
-                e.printStackTrace();
-                return new ReturnMessage("Error: " + e.getMessage(), null, false);
+                return new ReturnMessage("Database error: " + e.getMessage(), null, false);
             }
         }
-        return new ReturnMessage("Error: One or more fields name are invalid.", null, false);
+        return new ReturnMessage("Fields error: One or more fields name are invalid.", null, false);
     }
 
     public static ReturnMessage filterBook (String tableName, Object object, String logic) {
         Field[] fields = BookRequirements.class.getDeclaredFields();
         ArrayList<String> fieldsList = Parsers.parseFieldsArrayIntoStringList(fields);
-        boolean areFieldsValid = Validators.fieldsValidation(object, fieldsList);
+        boolean areFieldsValid = Validators.fieldsValidation(object, fieldsList, "filter");
         if (areFieldsValid) {
             try {
                 // Getting all the records
@@ -107,11 +114,10 @@ public class DatabaseHandlerBook {
                     return new ReturnMessage("Incorrect logic name.", null, false);
 
             } catch (InvocationTargetException | IllegalAccessException | NoSuchMethodException e) {
-                e.printStackTrace();
                 return new ReturnMessage("Error: " + e.getMessage(), null, false);
             }
         }
-        return new ReturnMessage("Error: One or more fields names are invalid.", null, false);
+        return new ReturnMessage("Fields error: One or more fields names are invalid.", null, false);
     }
 
     public static List<Object> filterBookAnd (ArrayList<String> variables, ArrayList<String> parametersGettersNames, List<Book> allRecordsBook) {

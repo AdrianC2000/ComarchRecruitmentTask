@@ -76,7 +76,7 @@ public class UniversalResource {
                 return Response.status(Response.Status.BAD_REQUEST).entity(violationsString.toString()).build();
             }
         }
-        return Response.status(Response.Status.BAD_REQUEST).entity("Invalid table name").build();
+        return Response.status(Response.Status.BAD_REQUEST).entity("Table '" + tableName + "' does not exist.").build();
     }
 
     @Inject
@@ -150,7 +150,7 @@ public class UniversalResource {
                 return Response.status(Response.Status.BAD_REQUEST).entity(violationsString.toString()).build();
             }
         }
-        return Response.status(Response.Status.BAD_REQUEST).entity("Wrong table name.").build();
+        return Response.status(Response.Status.BAD_REQUEST).entity("Table '" + tableName + "' does not exist.").build();
     }
 
 

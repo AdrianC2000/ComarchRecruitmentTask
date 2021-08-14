@@ -18,7 +18,7 @@ import java.util.List;
 
 public class Parsers {
 
-    public static List<Object> parseIntoObjectList(String tableName, ResultSet result) {
+    public static List<Object> parseResultSetIntoObjectList(String tableName, ResultSet result) {
         try {
             ResultSetMetaData rsmd = result.getMetaData();
             int columnsNumber = rsmd.getColumnCount();
@@ -28,6 +28,7 @@ public class Parsers {
                 while (result.next()) {
                     User actualUser = new User();
                     for (int i = 1; i <= columnsNumber; i++) {
+                        // Iterating through every column and setting variables to user
                         String columnValue = result.getString(i);
                         String columnName = rsmd.getColumnName(i);
                         // invoking the setter
@@ -64,29 +65,7 @@ public class Parsers {
             return gson.fromJson(tmp, User.class);
         }
         catch (Exception e) {
-            e.printStackTrace();
-            throw new ValidationException("Wrong date format.");
-        }
-    }
-
-    public static Object parseUserIntoObject(User user) {
-        try {
-            Gson gson = new GsonBuilder().
-                    registerTypeAdapter(Double.class,  new JsonSerializer<Double>() {
-                        @Override
-                        public JsonElement serialize(Double src, Type typeOfSrc, JsonSerializationContext context) {
-                            if(src == src.longValue())
-                                return new JsonPrimitive(src.longValue());
-                            return new JsonPrimitive(src);
-                        }
-
-                    }).serializeNulls().setDateFormat("yyyy-MM-dd").create();
-            String tmp = gson.toJson(user);
-            return gson.fromJson(tmp, Object.class);
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-            throw new ValidationException("Wrong date format.");
+            throw new ValidationException("Format error: Wrong date format. (should be yyyy-MM-dd)");
         }
     }
 
@@ -101,10 +80,7 @@ public class Parsers {
 
     public static List<Object> parseListUserIntoListObject(List<User> listUser) {
         List<Object> listObject = new ArrayList<>();
-        for (User i : listUser) {
-            Object newObject = parseUserIntoObject(i);
-            listObject.add(newObject);
-        }
+        listObject.addAll(listUser);
         return listObject;
     }
 

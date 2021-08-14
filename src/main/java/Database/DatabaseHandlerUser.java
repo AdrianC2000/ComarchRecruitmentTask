@@ -21,7 +21,7 @@ public class DatabaseHandlerUser {
     public static ReturnMessage addResourceUser(String tableName, Object object, Connection connection) {
         Field[] fields = User.class.getDeclaredFields();
         ArrayList<String> fieldsList = Parsers.parseFieldsArrayIntoStringList(fields);
-        boolean areFieldsValid = Validators.fieldsValidation(object, fieldsList);
+        boolean areFieldsValid = Validators.fieldsValidation(object, fieldsList, "add");
         if(areFieldsValid) {
             PreparedStatement preparedStmt = null;
             try {
@@ -58,7 +58,7 @@ public class DatabaseHandlerUser {
     public static ReturnMessage filterUser (String tableName, Object object, String logic) {
         Field[] fields = UserRequirements.class.getDeclaredFields();
         ArrayList<String> fieldsList = Parsers.parseFieldsArrayIntoStringList(fields);
-        boolean areFieldsValid = Validators.fieldsValidation(object, fieldsList);
+        boolean areFieldsValid = Validators.fieldsValidation(object, fieldsList, "filter");
         if (areFieldsValid) {
             try {
                 // Getting all the records
@@ -114,7 +114,7 @@ public class DatabaseHandlerUser {
 
         }
 
-        allRecordsUser.sort(Comparator.comparing(User::takeID_userInt));
+        allRecordsUser.sort(Comparator.comparing(User::getID_user));
 
         return Parsers.parseListUserIntoListObject(allRecordsUser);
     }
@@ -135,7 +135,7 @@ public class DatabaseHandlerUser {
             }
         }
 
-        allRecordsFiltered.sort(Comparator.comparing(User::takeID_userInt));
+        allRecordsFiltered.sort(Comparator.comparing(User::getID_user));
 
         return Parsers.parseListUserIntoListObject(allRecordsFiltered);
     }

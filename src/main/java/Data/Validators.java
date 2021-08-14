@@ -43,18 +43,22 @@ public class Validators {
         }
     }
 
-    public static boolean fieldsValidation (Object object, ArrayList<String> fields) {
+    public static boolean fieldsValidation (Object object, ArrayList<String> fields, String method) {
         Gson gson = new Gson();
         String tmp = gson.toJson(object);
 
         Type type = new TypeToken<Map<String, Object>>(){}.getType();
         Map<String,Object> map = gson.fromJson(tmp, type);
 
-        //iterate the map in order to get field name and value
+        // iterate the map in order to get field name and value and then check whether those fields are valid
         Set<String> fieldSet = map.keySet();
         for (String fieldName : fieldSet) {
             if (!fields.contains(fieldName))
                 return false;
+            if (method.equals("add")) {
+                if (fieldName.contains("ID"))
+                        return false;
+            }
         }
         return true;
     }

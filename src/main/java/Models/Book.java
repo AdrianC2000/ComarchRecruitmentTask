@@ -15,16 +15,19 @@ public class Book {
 
     private Integer ID_book;
 
-    @Size(min = 1, max = 50, message = "Size error: Title should have size [{min},{max}]")
+    @Size(min = 1, max = 50, message = "Size error: Title should have more than 0 signs and less than 50 signs.")
     private String title;
 
-    @Size(min = 1, max = 50, message = "Size error: Author should have size [{min},{max}]")
+    @Size(min = 1, max = 50, message = "Size error: Author should have more than 0 signs and less than 50 signs.")
+    @Pattern(regexp = "^[\\s\\p{L}]+$", message = "Format error: Author can only contain letters and spaces.")
     private String author;
 
-    @Pattern(regexp = "^(1|0)$", message = "Format error: Is taken has to be bool (1 / 0).")
+    @Pattern(regexp = "^(1|0)$", message = "Format error: Is taken has to be bool (0 / 1).")
     private String is_taken;
 
+/*
     @Min(value = 1, message = "Format error: Taken by has to be a positive integer.")
+*/
     private Integer taken_by;
 
     @PastOrPresent(message = "Format error: Creation date must be past or present.")
@@ -64,8 +67,8 @@ public class Book {
         this.is_taken = is_taken;
     }
 
-    public String getTaken_by() {
-        return taken_by.toString();
+    public Integer getTaken_by() {
+        return taken_by;
     }
 
     public void setTaken_by(String taken_by) {
