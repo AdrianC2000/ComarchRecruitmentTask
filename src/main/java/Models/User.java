@@ -97,7 +97,6 @@ public class User {
 
     public String allMethodsGetter(String methodName, User requirements) {
         try {
-            System.out.println(methodName + " " + ReflectionToStringBuilder.toString(requirements));
                 Method method = User.class.getDeclaredMethod(methodName);
                 return method.invoke(requirements).toString();
         }

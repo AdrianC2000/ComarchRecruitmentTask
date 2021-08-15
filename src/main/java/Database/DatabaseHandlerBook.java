@@ -7,6 +7,7 @@ import Models.Book;
 import Models.BookRequirements;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import io.vertx.core.json.impl.JsonUtil;
 import org.gradle.internal.impldep.org.apache.commons.lang.builder.ReflectionToStringBuilder;
 
 import java.lang.reflect.Field;
@@ -125,7 +126,7 @@ public class DatabaseHandlerBook {
         for (int i = 0; i < variables.size(); i++) {
             String var = variables.get(i);
             String param = parametersGettersNames.get(i);
-
+            System.out.println(var + " " + param);
             allRecordsBook = allRecordsBook.stream()
                     .filter(book -> book.allMethodsGetter(param, book).equals(var))
                     .collect(Collectors.toList());
@@ -143,6 +144,7 @@ public class DatabaseHandlerBook {
         for (int i = 0; i < variables.size(); i++) {
             String var = variables.get(i);
             String param = parametersGettersNames.get(i);
+            System.out.println(var + " " + param);
             tempRecordsFiltered = allRecordsBook.stream()
                     .filter(book -> book.allMethodsGetter(param, book).equals(var))
                     .collect(Collectors.toList());

@@ -38,7 +38,6 @@ public class Validators {
             System.out.println("SELECT 1 FROM " + table);
             return result.next();
         } catch (SQLException e) {
-            e.printStackTrace();
             return false;
         }
     }

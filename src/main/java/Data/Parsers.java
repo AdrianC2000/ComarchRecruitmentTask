@@ -45,8 +45,14 @@ public class Parsers {
                         String columnName = rsmd.getColumnName(i);
                         String methodName = "set" + columnName.substring(0, 1).toUpperCase() + columnName.substring(1);
                         // invoking the setter
-                        Method method = Book.class.getDeclaredMethod(methodName, String.class);
-                        method.invoke(actualBook, columnValue);
+                        if (!methodName.contains("Is")) {
+                            Method method = Book.class.getDeclaredMethod(methodName, String.class);
+                            method.invoke(actualBook, columnValue);
+                        }
+                        else {
+                            Method method = Book.class.getDeclaredMethod(methodName, Boolean.class);
+                            method.invoke(actualBook, columnValue.equals("1"));
+                        }
                     }
                     listOfUsers.add(actualBook);
                 }
@@ -90,7 +96,6 @@ public class Parsers {
             String tmp = gson.toJson(object);
             return gson.fromJson(tmp, Book.class);
         } catch (Exception e) {
-            e.printStackTrace();
             throw new ValidationException("Wrong date format.");
         }
     }
@@ -112,10 +117,7 @@ public class Parsers {
 
     public static List<Object> parseListBookIntoListObject(List<Book> listBook) {
         List<Object> listObject = new ArrayList<>();
-        for (Book i : listBook) {
-            Object newObject = parseBookIntoObject(i);
-            listObject.add(newObject);
-        }
+        listObject.addAll(listBook);
         return listObject;
     }
 

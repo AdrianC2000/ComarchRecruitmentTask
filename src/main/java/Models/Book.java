@@ -1,6 +1,5 @@
 package Models;
 
-import javax.validation.constraints.Min;
 import javax.validation.constraints.PastOrPresent;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
@@ -22,12 +21,9 @@ public class Book {
     @Pattern(regexp = "^[\\s\\p{L}]+$", message = "Format error: Author can only contain letters and spaces.")
     private String author;
 
-    @Pattern(regexp = "^(1|0)$", message = "Format error: Is taken has to be bool (0 / 1).")
+    @Pattern(regexp = "^(true|false|0|1)$", message = "Format error: Is taken has to be bool (true / false).")
     private String is_taken;
 
-/*
-    @Min(value = 1, message = "Format error: Taken by has to be a positive integer.")
-*/
     private Integer taken_by;
 
     @PastOrPresent(message = "Format error: Creation date must be past or present.")
@@ -60,11 +56,11 @@ public class Book {
     }
 
     public Boolean getIs_taken() {
-        return (is_taken.equals("1"));
+        return (is_taken.equals("true") || is_taken.equals("1"));
     }
 
-    public void setIs_taken(String is_taken) {
-        this.is_taken = is_taken;
+    public void setIs_taken(Boolean is_taken) {
+        this.is_taken = (is_taken) ? "1" : "0";
     }
 
     public Integer getTaken_by() {

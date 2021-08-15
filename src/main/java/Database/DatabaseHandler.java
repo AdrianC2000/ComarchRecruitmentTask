@@ -54,18 +54,21 @@ public class DatabaseHandler {
             try {
                 String IDname = "ID_" + tableName.substring(0, tableName.length() - 1);
                 if (parameter.contains("taken_by") && valueToSet != null) {
-                    if (!Validators.resourceExistence("users", Integer.parseInt(valueToSet), connection))
-                        throw new SQLException("User with the ID that you tried to set does not exist.");
+                    try {
+                        if (!Validators.resourceExistence(tableName, Integer.parseInt(valueToSet), connection))
+                            throw new SQLException("Database error: " + Parsers.resourceName(tableName) + " with the ID " + id + " does not exist.");
+                    }
+                    catch (NumberFormatException exc) {
+                        throw new SQLException("Wrong taken by value format - it has to be an positive integer or null.");
+                    }
                 }
                 if (Validators.resourceExistence(tableName, id, connection)) {
-                    Statement stmt = connection.createStatement();
                     PreparedStatement preparedStmt = connection.prepareStatement("UPDATE " + tableName + " SET " + parameter + " = ? WHERE " + IDname + " = " + id);
-                    preparedStmt.setString(1, valueToSet);
+                    if (!parameter.contains("is_taken"))
+                        preparedStmt.setString(1, valueToSet);
+                    else
+                        preparedStmt.setBoolean(1, valueToSet.equals("true"));
                     preparedStmt.execute();
-                    /*String query = "UPDATE " + tableName + " SET " + parameter + " = '" + valueToSet + "' WHERE " + IDname + " = " + id;
-                    System.out.println(query);
-                    stmt.executeUpdate("UPDATE " + tableName + " SET " + parameter + " = '" + valueToSet + "' WHERE " + IDname + " = " + id);
-                    System.out.println("querying UPDATE " + tableName + " WHERE ID_user = " + id);*/
                     return new ReturnMessage("Parameter " + parameter + " changed for " + valueToSet + " for " + Parsers.resourceName(tableName).toLowerCase() + " with the id " + id + " correctly.", null, true);
                 } else
                     return new ReturnMessage(Parsers.resourceName(tableName) + " with the id " + id + " does not exist.", null, false);

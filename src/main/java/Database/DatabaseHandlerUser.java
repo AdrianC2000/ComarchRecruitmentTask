@@ -49,10 +49,10 @@ public class DatabaseHandlerUser {
                 return new ReturnMessage("Resource added correctly.", null, true);
             } catch (SQLException | NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
                 e.printStackTrace();
-                return new ReturnMessage("Error: " + e.getMessage(), null, false);
+                return new ReturnMessage("Database error: " + e.getMessage(), null, false);
             }
         }
-        return new ReturnMessage("Error: One or more fields names are invalid.", null, false);
+        return new ReturnMessage("Fields error: One or more fields names are invalid.", null, false);
     }
 
     public static ReturnMessage filterUser (String tableName, Object object, String logic) {

@@ -1,0 +1,138 @@
+openapi: 3.0.3
+info:
+  title: Generated API
+  version: "1.0"
+servers:
+- url: /
+paths:
+  /hello:
+    get:
+      responses:
+        "200":
+          content:
+            text/plain:
+              schema:
+                type: string
+          description: OK
+      x-accepts: text/plain
+  /{tableName}:
+    get:
+      parameters:
+      - explode: false
+        in: path
+        name: tableName
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          description: OK
+      x-accepts: application/json
+    post:
+      parameters:
+      - explode: false
+        in: path
+        name: tableName
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: OK
+      x-contentType: application/json
+      x-accepts: application/json
+  /{tableName}/filter/{logic}:
+    post:
+      parameters:
+      - explode: false
+        in: path
+        name: logic
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: tableName
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: OK
+      x-contentType: application/json
+      x-accepts: application/json
+  /{tableName}/{id}:
+    delete:
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          format: int32
+          type: integer
+        style: simple
+      - explode: false
+        in: path
+        name: tableName
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          description: OK
+      x-accepts: application/json
+  /{tableName}/{id}/{parameterToChange}:
+    put:
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          format: int32
+          type: integer
+        style: simple
+      - explode: false
+        in: path
+        name: parameterToChange
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: tableName
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: true
+        in: query
+        name: value
+        required: false
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          description: OK
+      x-accepts: application/json
+components:
+  schemas: {}
+

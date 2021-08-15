@@ -101,7 +101,6 @@ public class UniversalResource {
                 method.invoke(newUser, valueToSet);
                 violations = validatorPut.validate(newUser);
             } catch (ParseException | NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
-                e.printStackTrace();
                 return Response.status(Response.Status.BAD_REQUEST).entity("Format error: Wrong parameter name.").build();
             }
 
@@ -127,12 +126,17 @@ public class UniversalResource {
             try {
                 Book newBook = new Book();
                 String methodName = "set" + param.substring(0, 1).toUpperCase() + param.substring(1);
+                if (!methodName.contains("setIs_taken")) {
                     Method method = Book.class.getDeclaredMethod(methodName, String.class);
                     method.invoke(newBook, valueToSet);
+                }
+                if (!methodName.contains("setIs_taken")) {
+                    Method method = Book.class.getDeclaredMethod(methodName, String.class);
+                    method.invoke(newBook, valueToSet);
+                }
 
                 violations = validatorPut.validate(newBook);
             } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
-                e.printStackTrace();
                 return Response.status(Response.Status.BAD_REQUEST).entity("Format error: Wrong parameter name.").build();
             }
 
