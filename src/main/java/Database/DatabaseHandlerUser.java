@@ -80,6 +80,7 @@ public class DatabaseHandlerUser {
                     String methodName = "get" + field.getName().substring(0, 1).toUpperCase() + field.getName().substring(1);
                     Method method = UserRequirements.class.getDeclaredMethod(methodName);
                     String[] var = (String[]) method.invoke(allRequirements);
+                    System.out.println(methodName + " " + Arrays.toString(var));
                     if (var != null) {
                         for (String j : var) {
                             variables.add(j.toString());
@@ -108,6 +109,7 @@ public class DatabaseHandlerUser {
         for (int i = 0; i < variables.size(); i++) {
             String var = variables.get(i);
             String param = parametersGettersNames.get(i);
+            System.out.println(var + " " + param);
             allRecordsUser = allRecordsUser.stream()
                     .filter(user -> user.allMethodsGetter(param, user).equals(var))
                     .collect(Collectors.toList());

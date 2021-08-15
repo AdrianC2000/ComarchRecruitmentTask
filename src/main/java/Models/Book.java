@@ -120,7 +120,7 @@ public class Book {
         try {
             Method method = Book.class.getDeclaredMethod(methodName);
             if (!methodName.contains("Is"))
-                return (String) method.invoke(requirements);
+                return method.invoke(requirements).toString();
             else
                 return (Boolean) method.invoke(requirements) ? "true" : "false";
         }

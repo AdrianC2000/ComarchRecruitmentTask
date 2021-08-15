@@ -73,7 +73,7 @@ public class DatabaseHandlerBook {
         return new ReturnMessage("Fields error: One or more fields name are invalid.", null, false);
     }
 
-    public static ReturnMessage filterBook (String tableName, Object object, String logic) {
+    public static ReturnMessage filterBook(String tableName, Object object, String logic) {
         Field[] fields = BookRequirements.class.getDeclaredFields();
         ArrayList<String> fieldsList = Parsers.parseFieldsArrayIntoStringList(fields);
         boolean areFieldsValid = Validators.fieldsValidation(object, fieldsList, "filter");
@@ -96,16 +96,15 @@ public class DatabaseHandlerBook {
                     // invoking the getter
                     String methodName = "get" + field.getName().substring(0, 1).toUpperCase() + field.getName().substring(1);
                     Method method = BookRequirements.class.getDeclaredMethod(methodName);
-
-                    String[] var;
-                        var = (String[]) method.invoke(allRequirements);
-                        if (var != null) {
-                            for (String j : var) {
-                                variables.add(j);
-                                parametersGettersNames.add(methodName);
-                            }
+                    String[] var = (String[]) method.invoke(allRequirements);
+                    System.out.println(methodName + " " + Arrays.toString(var));
+                    if (var != null) {
+                        for (String j : var) {
+                            variables.add(j.toString());
+                            parametersGettersNames.add(methodName);
                         }
                     }
+                }
 
                 if (logic.equals("AND"))
                     return new ReturnMessage("OK", filterBookAnd(variables, parametersGettersNames, allRecordsBook), true);
@@ -121,7 +120,7 @@ public class DatabaseHandlerBook {
         return new ReturnMessage("Fields error: One or more fields names are invalid.", null, false);
     }
 
-    public static List<Object> filterBookAnd (ArrayList<String> variables, ArrayList<String> parametersGettersNames, List<Book> allRecordsBook) {
+    public static List<Object> filterBookAnd(ArrayList<String> variables, ArrayList<String> parametersGettersNames, List<Book> allRecordsBook) {
 
         for (int i = 0; i < variables.size(); i++) {
             String var = variables.get(i);
@@ -137,7 +136,7 @@ public class DatabaseHandlerBook {
         return Parsers.parseListBookIntoListObject(allRecordsBook);
     }
 
-    public static List<Object> filterBookOr (ArrayList<String> variables, ArrayList<String> parametersGettersNames, List<Book> allRecordsBook) {
+    public static List<Object> filterBookOr(ArrayList<String> variables, ArrayList<String> parametersGettersNames, List<Book> allRecordsBook) {
         List<Book> allRecordsFiltered = new ArrayList<>();
         List<Book> tempRecordsFiltered;
 

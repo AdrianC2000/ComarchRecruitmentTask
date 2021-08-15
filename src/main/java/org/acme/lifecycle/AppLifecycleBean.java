@@ -2,6 +2,7 @@ package org.acme.lifecycle;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Observes;
+import javax.ws.rs.core.Response;
 
 import Database.DatabaseHandler;
 import io.quarkus.runtime.ShutdownEvent;

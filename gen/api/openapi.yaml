@@ -5,16 +5,6 @@ info:
 servers:
 - url: /
 paths:
-  /hello:
-    get:
-      responses:
-        "200":
-          content:
-            text/plain:
-              schema:
-                type: string
-          description: OK
-      x-accepts: text/plain
   /{tableName}:
     get:
       parameters:
