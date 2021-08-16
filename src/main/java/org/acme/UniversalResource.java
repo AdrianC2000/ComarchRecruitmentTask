@@ -39,7 +39,7 @@ public class UniversalResource {
     @Inject
     Validator validator;
     @POST
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.TEXT_PLAIN)
     @Consumes(MediaType.APPLICATION_JSON)
     public Response createResource(@PathParam("tableName") String tableName, Object newObject) {
         if (tableName.equals("users")) {
@@ -83,8 +83,8 @@ public class UniversalResource {
     Validator validatorPut;
     @PUT
     @Path("{id}/{parameterToChange}")
-    @Produces(MediaType.APPLICATION_JSON)
-    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.TEXT_PLAIN)
+    @Consumes(MediaType.TEXT_PLAIN)
     public Response updateResource(
             @PathParam("tableName") String tableName,
             @PathParam("id") Integer id,
@@ -160,8 +160,8 @@ public class UniversalResource {
 
     @DELETE
     @Path("{id}")
-    @Produces(MediaType.APPLICATION_JSON)
-    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.TEXT_PLAIN)
+    @Consumes(MediaType.TEXT_PLAIN)
     public Response deleteResource(
             @PathParam("tableName") String tableName,
             @PathParam("id") Integer id) {

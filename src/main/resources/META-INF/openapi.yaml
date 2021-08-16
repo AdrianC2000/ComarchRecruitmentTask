@@ -90,7 +90,7 @@ paths:
           schema:
             type: string
         - name: valueToSet
-          in: query
+          in: path
           required: true
           schema:
             type: string
@@ -179,7 +179,7 @@ paths:
           schema:
             type: string
         - name: valueToSet
-          in: query
+          in: path
           required: true
           schema:
             type: string
