@@ -7,11 +7,11 @@
 #
 # Then, build the image with:
 #
-# docker build -f src/main/docker/Dockerfile.native-distroless -t quarkus/rest-quarkus-library .
+# docker build -f src/main/docker/Dockerfile.native-distroless -t quarkus/library-api .
 #
 # Then run the container using:
 #
-# docker run -i --rm -p 8080:8080 quarkus/rest-quarkus-library
+# docker run -i --rm -p 8080:8080 quarkus/library-api
 #
 ###
 FROM quay.io/quarkus/quarkus-distroless-image:1.0

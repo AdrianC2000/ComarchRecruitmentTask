@@ -1,144 +1,132 @@
-package Database;
+package database;
 
-import Data.Parsers;
-import Data.ReturnMessage;
-import Data.Validators;
-import Models.User;
-import Models.UserRequirements;
-import com.google.gson.*;
+import data.Parsers;
+import data.messages.ReturnMessage;
+import data.messages.ReturnMessageUser;
+import data.Validators;
+import models.User;
+import models.UserRequirements;
+import org.gradle.internal.impldep.org.apache.commons.lang.builder.ReflectionToStringBuilder;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class DatabaseHandlerUser {
 
-    public static ReturnMessage addResourceUser(String tableName, Object object, Connection connection) {
-        Field[] fields = User.class.getDeclaredFields();
-        ArrayList<String> fieldsList = Parsers.parseFieldsArrayIntoStringList(fields);
-        boolean areFieldsValid = Validators.fieldsValidation(object, fieldsList, "add");
-        if(areFieldsValid) {
-            PreparedStatement preparedStmt = null;
+    private static final Connection connection = DatabaseHandler.getConnection();
+
+    public static ReturnMessageUser getUsers(String tableName) throws SQLException {
+        Statement stmt = connection.createStatement();
+        ResultSet result = stmt.executeQuery("SELECT * FROM " + tableName);
+        System.out.println("querying SELECT * FROM " + tableName);
+        return new ReturnMessageUser("OK", Parsers.parseResultSetIntoUserList(result), true);
+    }
+
+    public static ReturnMessage addUser(String tableName, User newUser) {
+        boolean areFieldsValid = Validators.fieldsValidationUser(newUser);
+        if (areFieldsValid) {
+            PreparedStatement preparedStmt;
             try {
-
-                Gson gson = new GsonBuilder().serializeNulls().setDateFormat("yyyy-MM-dd").create();
-                String tmp = gson.toJson(object);
-
-                User newUser = gson.fromJson(tmp, User.class);
-
                 String query = "INSERT INTO " + tableName + " (login, email, first_name, last_name, creation_date) VALUES (?, ?, ?, ?, ?)";
                 preparedStmt = connection.prepareStatement(query);
+                System.out.println(Parsers.prepareUser(preparedStmt, newUser));
+                Parsers.prepareUser(preparedStmt, newUser).execute();
+                System.out.println("querying INSERT INTO " + tableName);
+                return new ReturnMessage("Resource added correctly.", true);
+            } catch (SQLException e) {
+                return new ReturnMessage("Database error: " + e.getMessage() + ".\nCheck your input for typos.", false);
+            }
+        } else {
+            return new ReturnMessage("Fields error: Check your input for typos or forgotten parameters.", false);
+        }
+    }
 
-                for (int i = 1; i < fields.length; i++) {
-                    // invoking the getter
-                    String methodName = "get" + fields[i].getName().substring(0, 1).toUpperCase() + fields[i].getName().substring(1);
-                    Method method = User.class.getDeclaredMethod(methodName);
-                    String var = (String) method.invoke(newUser);
-                    preparedStmt.setString(i, var);
+    public static ReturnMessage updateUser(String tableName, Integer id, String parameter, String valueToSet) {
+        if (parameter.contains("ID")) {
+            return new ReturnMessage("You can't edit the ID field.", false);
+        }
+        if (valueToSet.equals("null")) {
+            valueToSet = null;
+        }
+        try {
+            String IDname = "ID_" + tableName.substring(0, tableName.length() - 1);
+            if (parameter.contains("taken_by") && valueToSet != null) {
+                try {
+                    if (!Validators.resourceExistence(tableName, Integer.parseInt(valueToSet), connection)) {
+                        throw new SQLException("Database error: " + Parsers.resourceName(tableName) + " with the ID " + id + " does not exist.");
+                    }
+                } catch (NumberFormatException exc) {
+                    throw new SQLException("Wrong taken by value format - it has to be an positive integer or null.");
                 }
-
-                assert preparedStmt != null;
+            }
+            if (Validators.resourceExistence(tableName, id, connection)) {
+                PreparedStatement preparedStmt = connection.prepareStatement("UPDATE " + tableName + " SET " + parameter + " = ? WHERE " + IDname + " = ? ");
+                preparedStmt.setString(1, valueToSet);
+                preparedStmt.setInt(2, id);
                 preparedStmt.execute();
 
-                System.out.println("querying INSERT INTO " + tableName);
-                return new ReturnMessage("Resource added correctly.", null, true);
-            } catch (SQLException | NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
-                e.printStackTrace();
-                return new ReturnMessage("Database error: " + e.getMessage(), null, false);
+                return new ReturnMessage("Parameter " + parameter + " changed for " + valueToSet + " for " + Parsers.resourceName(tableName).toLowerCase() + " with the id " + id + " correctly.", true);
+            } else {
+                System.out.println(Validators.resourceExistence(tableName, id, connection));
+                return new ReturnMessage(Parsers.resourceName(tableName) + " with the id " + id + " does not exist.", false);
             }
+        } catch (SQLException e) {
+            return new ReturnMessage("Database error: " + e.getMessage(), false);
         }
-        return new ReturnMessage("Fields error: One or more fields names are invalid.", null, false);
     }
 
-    public static ReturnMessage filterUser (String tableName, Object object, String logic) {
-        Field[] fields = UserRequirements.class.getDeclaredFields();
-        ArrayList<String> fieldsList = Parsers.parseFieldsArrayIntoStringList(fields);
-        boolean areFieldsValid = Validators.fieldsValidation(object, fieldsList, "filter");
-        if (areFieldsValid) {
-            try {
-                // Getting all the records
-                List<Object> allRecordsObject = DatabaseHandler.getResource(tableName).getResult();
-                List<User> allRecordsUser = Parsers.parseListObjectIntoListUser(allRecordsObject);
-
-                // Getting all the requirements
-                Gson gson = new Gson();
-                String tmp = gson.toJson(object);
-                UserRequirements allRequirements = gson.fromJson(tmp, UserRequirements.class);
-
-                // Separating signs from variables
-                ArrayList<String> variables = new ArrayList<>();
-                ArrayList<String> parametersGettersNames = new ArrayList<>();
-
-
-                for (Field field : fields) {
-                    // invoking the getter
-                    String methodName = "get" + field.getName().substring(0, 1).toUpperCase() + field.getName().substring(1);
-                    Method method = UserRequirements.class.getDeclaredMethod(methodName);
-                    String[] var = (String[]) method.invoke(allRequirements);
-                    System.out.println(methodName + " " + Arrays.toString(var));
-                    if (var != null) {
-                        for (String j : var) {
-                            variables.add(j.toString());
-                            parametersGettersNames.add(methodName);
+    public static ReturnMessageUser filterUser(String tableName, UserRequirements allRequirements, String logic) {
+        try {
+            System.out.println(ReflectionToStringBuilder.toString(allRequirements));
+            HashMap<String, String[]> requirementsMap = Parsers.parseUserRequirementsIntoHashMap(allRequirements);
+            StringBuilder query = new StringBuilder("SELECT * FROM " + tableName + " WHERE ");
+            for (Map.Entry<String, String[]> entry : requirementsMap.entrySet()) {
+                String parameter = entry.getKey();
+                String[] values = entry.getValue();
+                if (values != null) {
+                    System.out.println(parameter);
+                    System.out.println(Arrays.toString(values));
+                    if (values.length > 1) {
+                        for (int i = 0; i < values.length; i++) {
+                            if (i == 0) {
+                                query.append(parameter).append(" IN (?, ");
+                            } else if (i == values.length - 1) {
+                                query.append("?)");
+                            } else {
+                                query.append("?, ");
+                            }
                         }
+                    } else {
+                        query.append(parameter).append(" IN (?) ");
+                    }
+                    query.append(" ").append(logic).append(" ");
+                    System.out.println(query);
+                }
+            }
+            String queryString = "";
+            if (logic.equals("AND")) {
+                queryString = query.substring(0, query.length() - 5);
+            } else if (logic.equals("OR")) {
+                queryString = query.substring(0, query.length() - 4);
+            }
+            PreparedStatement preparedStmt = connection.prepareStatement(queryString);
+            int index = 1;
+            for (Map.Entry<String, String[]> entry : requirementsMap.entrySet()) {
+                String[] values = entry.getValue();
+                if (values != null) {
+                    for (String value : values) {
+                        preparedStmt.setString(index, value);
+                        index++;
                     }
                 }
-
-                if (logic.equals("AND"))
-                    return new ReturnMessage("OK", filterUserAnd(variables, parametersGettersNames, allRecordsUser), true);
-                else if (logic.equals("OR"))
-                    return new ReturnMessage("OK", filterUserOr(variables, parametersGettersNames, allRecordsUser), true);
-                else
-                    return new ReturnMessage("Incorrect logic name.", null, false);
-
-            } catch (InvocationTargetException | IllegalAccessException | NoSuchMethodException e) {
-                e.printStackTrace();
-                return new ReturnMessage("Error: " + e.getMessage(), null, false);
+                System.out.println(preparedStmt);
             }
+            ResultSet result = preparedStmt.executeQuery();
+
+            return new ReturnMessageUser("OK", Parsers.parseResultSetIntoUserList(result), true);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return new ReturnMessageUser("Database error: " + e.getMessage(), null, false);
         }
-        return new ReturnMessage("Error: One or more fields names are invalid.", null, false);
-    }
-
-    public static List<Object> filterUserAnd (ArrayList<String> variables, ArrayList<String> parametersGettersNames, List<User> allRecordsUser) {
-
-        for (int i = 0; i < variables.size(); i++) {
-            String var = variables.get(i);
-            String param = parametersGettersNames.get(i);
-            System.out.println(var + " " + param);
-            allRecordsUser = allRecordsUser.stream()
-                    .filter(user -> user.allMethodsGetter(param, user).equals(var))
-                    .collect(Collectors.toList());
-
-        }
-
-        allRecordsUser.sort(Comparator.comparing(User::getID_user));
-
-        return Parsers.parseListUserIntoListObject(allRecordsUser);
-    }
-
-    public static List<Object> filterUserOr (ArrayList<String> variables, ArrayList<String> parametersGettersNames, List<User> allRecordsUser) {
-        List<User> allRecordsFiltered = new ArrayList<>();
-        List<User> tempRecordsFiltered;
-
-        for (int i = 0; i < variables.size(); i++) {
-            String var = variables.get(i);
-            String param = parametersGettersNames.get(i);
-            tempRecordsFiltered = allRecordsUser.stream()
-                    .filter(user -> user.allMethodsGetter(param, user).equals(var))
-                    .collect(Collectors.toList());
-            for (User user : tempRecordsFiltered) {
-                if (!allRecordsFiltered.contains(user))
-                    allRecordsFiltered.add(user);
-            }
-        }
-
-        allRecordsFiltered.sort(Comparator.comparing(User::getID_user));
-
-        return Parsers.parseListUserIntoListObject(allRecordsFiltered);
     }
 }

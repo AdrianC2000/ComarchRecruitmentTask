@@ -1,16 +1,15 @@
-package Data;
+package data;
 
-import Models.User;
+import com.google.gson.GsonBuilder;
+import models.Book;
+import models.User;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import javax.enterprise.context.ApplicationScoped;
-import javax.validation.Valid;
+import java.lang.reflect.Field;
 import java.lang.reflect.Type;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Set;
@@ -19,11 +18,12 @@ import java.util.Set;
 public class Validators {
 
     public static boolean resourceExistence(String table, Integer id, Connection connection) {
+        // If SQLException appears, ID does not exist
         try {
             String IDname = "ID_" + table.substring(0, table.length() - 1);
-            Statement stmt = connection.createStatement();
-            ResultSet result = stmt.executeQuery("SELECT 1 FROM " + table + " WHERE " + IDname + " = " + id);
-            System.out.println("quering SELECT 1 FROM " + table + " WHERE ID_user = " + id);
+            PreparedStatement preparedStmt = connection.prepareStatement("SELECT 1 FROM " + table + " WHERE " + IDname + " = ?");
+            preparedStmt.setInt(1, id);
+            ResultSet result = preparedStmt.executeQuery();
             return result.next();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -31,38 +31,64 @@ public class Validators {
         }
     }
 
-    public static boolean tableExistence(String table, Connection connection) {
-        try {
-            Statement stmt = connection.createStatement();
-            ResultSet result = stmt.executeQuery("SELECT 1 FROM " + table);
-            System.out.println("SELECT 1 FROM " + table);
-            return result.next();
-        } catch (SQLException e) {
+    public static boolean fieldsValidationUser (User newUser) {
+        Field[] fields = User.class.getDeclaredFields();
+        ArrayList<String> fieldsList = Parsers.parseFieldsArrayIntoStringList(fields);
+
+        Gson gson = new GsonBuilder().create();
+        String tmp = gson.toJson(newUser);
+        Type type = new TypeToken<Map<String, Object>>() {
+        }.getType();
+        Map<String, Object> map = gson.fromJson(tmp, type);
+        Set<String> fieldSet = map.keySet();
+
+        // Check if 4 or 5 field are set - if not, the input is invalid
+        if (fieldSet.size() < fieldsList.size() - 2) {
             return false;
         }
-    }
 
-    public static boolean fieldsValidation (Object object, ArrayList<String> fields, String method) {
-        Gson gson = new Gson();
-        String tmp = gson.toJson(object);
-
-        Type type = new TypeToken<Map<String, Object>>(){}.getType();
-        Map<String,Object> map = gson.fromJson(tmp, type);
-
-        // iterate the map in order to get field name and value and then check whether those fields are valid
-        Set<String> fieldSet = map.keySet();
-        for (String fieldName : fieldSet) {
-            if (!fields.contains(fieldName))
+        // Check if any of required parameter is not null - if it is, the input is invalid
+        String[] requiredParameters = newUser.allRequiredData();
+        for (String parameter : requiredParameters) {
+            if (parameter == null) {
                 return false;
-            if (method.equals("add")) {
-                if (fieldName.contains("ID"))
-                        return false;
+            }
+        }
+
+        // Check if any of the field is not the ID field - if it is, the input is invalid
+        for (String fieldName : fieldSet) {
+            if (fieldName.contains("ID")) {
+                return false;
             }
         }
         return true;
     }
 
-    public void validateUser(@Valid User user) {
-    }
+    public static boolean fieldsValidationBook (Book newBook) {
+        Field[] fields = Book.class.getDeclaredFields();
+        ArrayList<String> fieldsList = Parsers.parseFieldsArrayIntoStringList(fields);
 
+        Gson gson = new GsonBuilder().create();
+        String tmp = gson.toJson(newBook);
+        Type type = new TypeToken<Map<String, Object>>() {
+        }.getType();
+        Map<String, Object> map = gson.fromJson(tmp, type);
+        Set<String> fieldSet = map.keySet();
+
+        // Check if any of required parameter is not null - if it is, the input is invalid
+        String[] requiredParameters = newBook.allRequiredData();
+        for (String parameter : requiredParameters) {
+            if (parameter == null) {
+                return false;
+            }
+        }
+
+        // Check if any of the field is not the ID field - if it is, the input is invalid
+        for (String fieldName : fieldSet) {
+            if (fieldName.contains("ID")) {
+                return false;
+            }
+        }
+        return true;
+    }
 }

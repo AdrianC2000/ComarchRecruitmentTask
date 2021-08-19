@@ -1,25 +1,20 @@
-package Models;
-
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+package models;
 
 public class UserRequirements {
-    private String[] ID_user;
+
+    private String[] id_user;
     private String[] login;
     private String[] email;
     private String[] first_name;
     private String[] last_name;
     private String[] creation_date;
 
-    public String[] getID_user() {
-        return ID_user;
+    public String[] getId_user() {
+        return id_user;
     }
 
-    public void setID_user(Integer[] ID_user) {
-        String[] stringArrayID = new String[ID_user.length];
-        for (int i = 0; i < stringArrayID.length; i++)
-            stringArrayID[i] = (ID_user[i]).toString();
-        this.ID_user = stringArrayID;
+    public void setId_user(String[] id_user) {
+        this.id_user = id_user;
     }
 
     public String[] getLogin() {

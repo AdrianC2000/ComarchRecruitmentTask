@@ -1,8 +1,7 @@
-package Models;
+package models;
 
-import javax.validation.constraints.*;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import javax.validation.constraints.PastOrPresent;
+import javax.validation.constraints.Pattern;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -13,8 +12,7 @@ public class User {
     @Pattern(regexp = "^\\S+$", message = "Format error: Login cannot contain spaces and cannot be empty.")
     private String login;
 
-    @Pattern(regexp = "^[\\w]+@([\\w-]+\\.)+[\\w-]{2,4}$", message = "Format error: Email cannot contain spaces or is empty.")
-    /*@Email(message = "Format error: Incorrect email format.") this is not always valid */
+    @Pattern(regexp = "^[\\w]+@([\\w-]+\\.)+[\\w-]{2,4}$", message = "Format error: Incorrect email format.")
     private String email;
 
     @Pattern(regexp = "^[\\p{L}]+$", message = "Format error: First name can only contain letters and cannot be empty.")
@@ -28,7 +26,13 @@ public class User {
     private Date creation_date;
 
 
-    public User() throws ParseException {
+    public User(Integer ID_user, String login, String email, String first_name, String last_name, Date creation_date) {
+        this.ID_user = ID_user;
+        this.login = login;
+        this.email = email;
+        this.first_name = first_name;
+        this.last_name = last_name;
+        this.creation_date = creation_date;
     }
 
     public Integer getID_user() {
@@ -71,35 +75,21 @@ public class User {
         this.last_name = last_name;
     }
 
-    public String getCreation_date() {
-        try {
-            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
-            return formatter.format(creation_date);
-        }
-        catch (NullPointerException e) {
-            return null;
-        }
+    public Date getCreation_date() {
+        return this.creation_date;
     }
 
     public void setCreation_date(String creation_date) {
-        /*if (!Validators.validateJavaDate(creation_date)) {
-        }*/
         try {
             SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
             this.creation_date = formatter.parse(creation_date);
-        }
-        catch (ParseException | NullPointerException e) {
+        } catch (ParseException | NullPointerException e) {
+            // If incorrect format or null, set date to null
             this.creation_date = null;
         }
     }
 
-    public String allMethodsGetter(String methodName, User requirements) {
-        try {
-                Method method = User.class.getDeclaredMethod(methodName);
-                return method.invoke(requirements).toString();
-        }
-        catch (InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
-            return null;
-        }
+    public String[] allRequiredData() {
+        return new String[]{this.login, this.email, this.first_name, this.last_name};
     }
 }

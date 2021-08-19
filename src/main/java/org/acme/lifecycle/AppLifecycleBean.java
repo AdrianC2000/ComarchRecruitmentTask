@@ -1,13 +1,11 @@
 package org.acme.lifecycle;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.event.Observes;
-import javax.ws.rs.core.Response;
-
-import Database.DatabaseHandler;
-import io.quarkus.runtime.ShutdownEvent;
+import database.DatabaseHandler;
 import io.quarkus.runtime.StartupEvent;
 import org.jboss.logging.Logger;
+
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.event.Observes;
 
 @ApplicationScoped
 public class AppLifecycleBean {

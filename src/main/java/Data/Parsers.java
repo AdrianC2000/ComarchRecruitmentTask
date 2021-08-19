@@ -1,125 +1,130 @@
-package Data;
+package data;
 
-import Models.Book;
-import Models.User;
-import com.google.gson.*;
-import org.gradle.internal.impldep.org.apache.commons.lang.builder.ReflectionToStringBuilder;
-import org.jboss.resteasy.spi.UnhandledException;
+import models.Book;
+import models.BookRequirements;
+import models.User;
+import models.UserRequirements;
 
-import javax.validation.ValidationException;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Type;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLOutput;
-import java.util.ArrayList;
-import java.util.List;
+import java.sql.SQLException;
+import java.util.*;
 
 public class Parsers {
 
-    public static List<Object> parseResultSetIntoObjectList(String tableName, ResultSet result) {
-        try {
-            ResultSetMetaData rsmd = result.getMetaData();
-            int columnsNumber = rsmd.getColumnCount();
-            List<Object> listOfUsers = new ArrayList<>();
+    /* Methods for the user */
 
-            if (tableName.equals("users")) {
-                while (result.next()) {
-                    User actualUser = new User();
-                    for (int i = 1; i <= columnsNumber; i++) {
-                        // Iterating through every column and setting variables to user
-                        String columnValue = result.getString(i);
-                        String columnName = rsmd.getColumnName(i);
-                        // invoking the setter
-                        Method method = User.class.getDeclaredMethod("set" + columnName.substring(0, 1).toUpperCase() + columnName.substring(1), String.class);
-                        method.invoke(actualUser, columnValue);
-                    }
-                    listOfUsers.add(actualUser);
-                }
-            } else if (tableName.equals("books")) {
-                while (result.next()) {
-                    Book actualBook = new Book();
-                    for (int i = 1; i <= columnsNumber; i++) {
-                        String columnValue = result.getString(i);
-                        String columnName = rsmd.getColumnName(i);
-                        String methodName = "set" + columnName.substring(0, 1).toUpperCase() + columnName.substring(1);
-                        // invoking the setter
-                        if (!methodName.contains("Is")) {
-                            Method method = Book.class.getDeclaredMethod(methodName, String.class);
-                            method.invoke(actualBook, columnValue);
-                        }
-                        else {
-                            Method method = Book.class.getDeclaredMethod(methodName, Boolean.class);
-                            method.invoke(actualBook, columnValue.equals("1"));
-                        }
-                    }
-                    listOfUsers.add(actualBook);
-                }
-            }
-            return listOfUsers;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+    public static List<User> parseResultSetIntoUserList(ResultSet result) throws SQLException {
+        List<User> listOfUsers = new ArrayList<>();
+        while (result.next()) {
+            Integer ID = result.getInt(1);
+            String login = result.getString(2);
+            String email = result.getString(3);
+            String firstName = result.getString(4);
+            String secondName = result.getString(5);
+            Date date = result.getDate(6);
+
+            User actualUser = new User(ID, login, email, firstName, secondName, date);
+            listOfUsers.add(actualUser);
         }
+        return listOfUsers;
     }
 
-    public static User parseObjectIntoUser(Object object) {
-        try {
-            Gson gson = new GsonBuilder().serializeNulls().setDateFormat("yyyy-MM-dd").create();
-            String tmp = gson.toJson(object);
-            return gson.fromJson(tmp, User.class);
+    public static PreparedStatement prepareUser(PreparedStatement preparedStmt, User newUser) throws SQLException {
+        String login = newUser.getLogin();
+        preparedStmt.setString(1, login);
+        String email = newUser.getEmail();
+        preparedStmt.setString(2, email);
+        String firstName = newUser.getFirst_name();
+        preparedStmt.setString(3, firstName);
+        String secondName = newUser.getLast_name();
+        preparedStmt.setString(4, secondName);
+        Date date = newUser.getCreation_date();
+        java.sql.Date dateSQL;
+        if (date != null) {
+            dateSQL = new java.sql.Date(date.getTime());
+        } else {
+            dateSQL = null;
         }
-        catch (Exception e) {
-            throw new ValidationException("Format error: Wrong date format. (should be yyyy-MM-dd)");
+
+        preparedStmt.setDate(5, dateSQL);
+        return preparedStmt;
+    }
+
+    public static HashMap<String, String[]> parseUserRequirementsIntoHashMap(UserRequirements requirements) {
+        HashMap<String, String[]> requirementsMap = new HashMap<>();
+        requirementsMap.put("ID_user", requirements.getId_user());
+        requirementsMap.put("login", requirements.getLogin());
+        requirementsMap.put("email", requirements.getEmail());
+        requirementsMap.put("first_name", requirements.getFirst_name());
+        requirementsMap.put("last_name", requirements.getLast_name());
+        requirementsMap.put("creation_date", requirements.getCreation_date());
+        return requirementsMap;
+    }
+
+    /* Methods for the books */
+
+    public static List<Book> parseResultSetIntoBookList(ResultSet result) throws SQLException {
+        List<Book> listOfBooks = new ArrayList<>();
+        while (result.next()) {
+            Integer ID = result.getInt(1);
+            String title = result.getString(2);
+            String author = result.getString(3);
+            Integer isTaken = result.getInt(4);
+            Integer takenBy = result.getInt(5);
+            Date takenDate = result.getDate(6);
+            Date returnDate = result.getDate(7);
+
+            Book actualBook = new Book(ID, title, author, isTaken, takenBy, takenDate, returnDate);
+            listOfBooks.add(actualBook);
         }
+        return listOfBooks;
     }
 
-    public static List<User> parseListObjectIntoListUser(List<Object> listObject) {
-        List<User> listUser = new ArrayList<>();
-        for (Object i : listObject) {
-            User newUser = parseObjectIntoUser(i);
-            listUser.add(newUser);
+    public static PreparedStatement prepareBook(PreparedStatement preparedStmt, Book newBook) throws SQLException {
+        String title = newBook.getTitle();
+        preparedStmt.setString(1, title);
+        String author = newBook.getAuthor();
+        preparedStmt.setString(2, author);
+        int isTaken = newBook.getIs_taken() ? 1 : 0;
+        preparedStmt.setInt(3, isTaken);
+        int takenBy = newBook.getTaken_by();
+        preparedStmt.setInt(4, takenBy);
+        Date takenDate = newBook.getTaken_date();
+        java.sql.Date takenDateSQL;
+        if (takenDate != null) {
+            takenDateSQL = new java.sql.Date(takenDate.getTime());
+        } else {
+            takenDateSQL = null;
         }
-        return listUser;
-    }
-
-    public static List<Object> parseListUserIntoListObject(List<User> listUser) {
-        List<Object> listObject = new ArrayList<>();
-        listObject.addAll(listUser);
-        return listObject;
-    }
-
-    public static Book parseObjectIntoBook(Object object) {
-        try {
-            Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd").serializeNulls().create();
-            String tmp = gson.toJson(object);
-            return gson.fromJson(tmp, Book.class);
-        } catch (Exception e) {
-            throw new ValidationException("Wrong date format.");
+        preparedStmt.setDate(5, takenDateSQL);
+        Date returnDate = newBook.getReturn_date();
+        java.sql.Date returnDateSQL;
+        if (returnDate != null) {
+            returnDateSQL = new java.sql.Date(returnDate.getTime());
+        } else {
+            returnDateSQL = null;
         }
+
+        preparedStmt.setDate(6, returnDateSQL);
+        return preparedStmt;
     }
 
-    public static Object parseBookIntoObject(Book book) {
-        Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd").serializeNulls().create();
-        String tmp = gson.toJson(book);
-        return gson.fromJson(tmp, Object.class);
+    public static HashMap<String, String[]> parseBookRequirementsIntoHashMap(BookRequirements requirements) {
+        HashMap<String, String[]> requirementsMap = new HashMap<>();
+        requirementsMap.put("ID_book", requirements.getID_book());
+        requirementsMap.put("title", requirements.getTitle());
+        requirementsMap.put("author", requirements.getAuthor());
+        requirementsMap.put("is_taken", requirements.getIs_taken());
+        requirementsMap.put("taken_by", requirements.getTaken_by());
+        requirementsMap.put("taken_date", requirements.getTaken_date());
+        requirementsMap.put("return_date", requirements.getReturn_date());
+
+        return requirementsMap;
     }
 
-    public static List<Book> parseListObjectIntoListBook(List<Object> listObject) {
-        List<Book> listBook = new ArrayList<>();
-        for (Object i : listObject) {
-            Book newBook = parseObjectIntoBook(i);
-            listBook.add(newBook);
-        }
-        return listBook;
-    }
-
-    public static List<Object> parseListBookIntoListObject(List<Book> listBook) {
-        List<Object> listObject = new ArrayList<>();
-        listObject.addAll(listBook);
-        return listObject;
-    }
+    /* Universal methods */
 
     public static ArrayList<String> parseFieldsArrayIntoStringList(Field[] fields) {
         ArrayList<String> stringList = new ArrayList<>();

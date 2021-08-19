@@ -1,160 +1,129 @@
-package Database;
+package database;
 
-import Data.Parsers;
-import Data.ReturnMessage;
-import Data.Validators;
-import Models.Book;
-import Models.BookRequirements;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import io.vertx.core.json.impl.JsonUtil;
-import org.gradle.internal.impldep.org.apache.commons.lang.builder.ReflectionToStringBuilder;
+import data.*;
+import data.messages.ReturnMessage;
+import data.messages.ReturnMessageBook;
+import models.Book;
+import models.BookRequirements;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.sql.*;
+import java.util.*;
 
 public class DatabaseHandlerBook {
 
-    public static ReturnMessage addResourceBook(String tableName, Object object, Connection connection) {
-        Field[] fields = Book.class.getDeclaredFields();
-        ArrayList<String> fieldsList = Parsers.parseFieldsArrayIntoStringList(fields);
-        boolean areFieldsValid = Validators.fieldsValidation(object, fieldsList, "add");
-        if (areFieldsValid) {
-            PreparedStatement preparedStmt = null;
-            try {
-                Gson gson = new GsonBuilder().serializeNulls().setDateFormat("yyyy-MM-dd").create();
-                String tmp = gson.toJson(object);
-                Book newBook = gson.fromJson(tmp, Book.class);
+    private static final Connection connection = DatabaseHandler.getConnection();
 
+    public static ReturnMessageBook getBooks(String tableName) throws SQLException {
+        Statement stmt = connection.createStatement();
+        ResultSet result = stmt.executeQuery("SELECT * FROM " + tableName);
+        System.out.println("querying SELECT * FROM " + tableName);
+        return new ReturnMessageBook("OK", Parsers.parseResultSetIntoBookList(result), true);
+    }
+
+    public static ReturnMessage addBook(String tableName, Book newBook) {
+        boolean areFieldsValid = Validators.fieldsValidationBook(newBook);
+        if (areFieldsValid) {
+            PreparedStatement preparedStmt;
+            try {
                 String query = "INSERT INTO " + tableName + " (title, author, is_taken, taken_by, taken_date, return_date) VALUES (?, ?, ?, ?, ?, ?)";
                 preparedStmt = connection.prepareStatement(query);
+                System.out.println(Parsers.prepareBook(preparedStmt, newBook));
+                Parsers.prepareBook(preparedStmt, newBook).execute();
+                System.out.println("querying INSERT INTO " + tableName);
+                return new ReturnMessage("Resource added correctly.", true);
+            } catch (SQLException e) {
+                return new ReturnMessage("Database error: " + e.getMessage() + ".\nCheck your input for typos.", false);
+            }
+        } else {
+            return new ReturnMessage("Fields error: Check your input for typos or forgotten parameters.", false);
+        }
+    }
 
-                for (int i = 1; i < fields.length; i++) {
-                    // invoking the getter
-                    String methodName = "get" + fields[i].getName().substring(0, 1).toUpperCase() + fields[i].getName().substring(1);
-                    Method method = Book.class.getDeclaredMethod(methodName);
-
-                    String var;
-                    Boolean isTaken;
-                    if (methodName.equals("getIs_taken")) {
-                        isTaken = (Boolean) method.invoke(newBook);
-                        preparedStmt.setBoolean(i, isTaken);
-                    } else {
-                        try {
-                            var = method.invoke(newBook).toString();
-                        } catch (NullPointerException e) {
-                            var = null;
-                        }
-                        if (methodName.equals("getTaken_by") && var != null) {
-                            if (!Validators.resourceExistence("users", Integer.parseInt(var), connection))
-                                throw new SQLException("User with given ID does not exist.");
-                        }
-                        preparedStmt.setString(i, var);
+    public static ReturnMessage updateBook(String tableName, Integer id, String parameter, String valueToSet) {
+        if (parameter.contains("ID")) {
+            return new ReturnMessage("You can't edit the ID field.", false);
+        }
+        if (valueToSet.equals("null")) {
+            valueToSet = null;
+        }
+        try {
+            String IDname = "ID_" + tableName.substring(0, tableName.length() - 1);
+            if (parameter.contains("taken_by") && valueToSet != null) {
+                try {
+                    if (!Validators.resourceExistence(tableName, Integer.parseInt(valueToSet), connection)) {
+                        throw new SQLException("Database error: " + Parsers.resourceName(tableName) + " with the ID " + id + " does not exist.");
                     }
+                } catch (NumberFormatException exc) {
+                    throw new SQLException("Wrong taken by value format - it has to be an positive integer or null.");
                 }
-                assert preparedStmt != null;
+            }
+            if (Validators.resourceExistence(tableName, id, connection)) {
+                PreparedStatement preparedStmt = connection.prepareStatement("UPDATE " + tableName + " SET " + parameter + " = ? WHERE " + IDname + " = ? ");
+                preparedStmt.setString(1, valueToSet);
+                preparedStmt.setInt(2, id);
                 preparedStmt.execute();
 
-                System.out.println("querying INSERT INTO " + tableName);
-                return new ReturnMessage("Resource added correctly.", null, true);
-            } catch (SQLException | NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
-                return new ReturnMessage("Database error: " + e.getMessage(), null, false);
+                return new ReturnMessage("Parameter " + parameter + " changed for " + valueToSet + " for " + Parsers.resourceName(tableName).toLowerCase() + " with the id " + id + " correctly.", true);
+            } else {
+                System.out.println(Validators.resourceExistence(tableName, id, connection));
+                return new ReturnMessage(Parsers.resourceName(tableName) + " with the id " + id + " does not exist.", false);
             }
+        } catch (SQLException e) {
+            return new ReturnMessage("Database error: " + e.getMessage(), false);
         }
-        return new ReturnMessage("Fields error: One or more fields name are invalid.", null, false);
     }
 
-    public static ReturnMessage filterBook(String tableName, Object object, String logic) {
-        Field[] fields = BookRequirements.class.getDeclaredFields();
-        ArrayList<String> fieldsList = Parsers.parseFieldsArrayIntoStringList(fields);
-        boolean areFieldsValid = Validators.fieldsValidation(object, fieldsList, "filter");
-        if (areFieldsValid) {
-            try {
-                // Getting all the records
-                List<Object> allRecordsObject = DatabaseHandler.getResource(tableName).getResult();
-                List<Book> allRecordsBook = Parsers.parseListObjectIntoListBook(allRecordsObject);
-
-                // Getting all the requirements
-                Gson gson = new Gson();
-                String tmp = gson.toJson(object);
-                BookRequirements allRequirements = gson.fromJson(tmp, BookRequirements.class);
-
-                // Separating signs from variables
-                ArrayList<String> variables = new ArrayList<>();
-                ArrayList<String> parametersGettersNames = new ArrayList<>();
-
-                for (Field field : fields) {
-                    // invoking the getter
-                    String methodName = "get" + field.getName().substring(0, 1).toUpperCase() + field.getName().substring(1);
-                    Method method = BookRequirements.class.getDeclaredMethod(methodName);
-                    String[] var = (String[]) method.invoke(allRequirements);
-                    System.out.println(methodName + " " + Arrays.toString(var));
-                    if (var != null) {
-                        for (String j : var) {
-                            variables.add(j.toString());
-                            parametersGettersNames.add(methodName);
+    public static ReturnMessageBook filterBook(String tableName, BookRequirements allRequirements, String logic) {
+        try {
+            HashMap<String, String[]> requirementsMap = Parsers.parseBookRequirementsIntoHashMap(allRequirements);
+            StringBuilder query = new StringBuilder("SELECT * FROM " + tableName + " WHERE ");
+            for (Map.Entry<String, String[]> entry : requirementsMap.entrySet()) {
+                String parameter = entry.getKey();
+                String[] values = entry.getValue();
+                if (values != null) {
+                    System.out.println(parameter);
+                    System.out.println(Arrays.toString(values));
+                    if (values.length > 1) {
+                        for (int i = 0; i < values.length; i++) {
+                            if (i == 0) {
+                                query.append(parameter).append(" IN (?, ");
+                            } else if (i == values.length - 1) {
+                                query.append("?)");
+                            } else {
+                                query.append("?, ");
+                            }
                         }
+                    } else {
+                        query.append(parameter).append(" IN (?) ");
+                    }
+                    query.append(" ").append(logic).append(" ");
+                    System.out.println(query);
+                }
+            }
+            String queryString = "";
+            if (logic.equals("AND")) {
+                queryString = query.substring(0, query.length() - 5);
+            } else if (logic.equals("OR")) {
+                queryString = query.substring(0, query.length() - 4);
+            }
+            PreparedStatement preparedStmt = connection.prepareStatement(queryString);
+            int index = 1;
+            for (Map.Entry<String, String[]> entry : requirementsMap.entrySet()) {
+                String[] values = entry.getValue();
+                if (values != null) {
+                    for (String value : values) {
+                        preparedStmt.setString(index, value);
+                        index++;
                     }
                 }
-
-                if (logic.equals("AND"))
-                    return new ReturnMessage("OK", filterBookAnd(variables, parametersGettersNames, allRecordsBook), true);
-                else if (logic.equals("OR"))
-                    return new ReturnMessage("OK", filterBookOr(variables, parametersGettersNames, allRecordsBook), true);
-                else
-                    return new ReturnMessage("Incorrect logic name.", null, false);
-
-            } catch (InvocationTargetException | IllegalAccessException | NoSuchMethodException e) {
-                return new ReturnMessage("Error: " + e.getMessage(), null, false);
+                System.out.println(preparedStmt);
             }
+            ResultSet result = preparedStmt.executeQuery();
+
+            return new ReturnMessageBook("OK", Parsers.parseResultSetIntoBookList(result), true);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return new ReturnMessageBook("Database error: " + e.getMessage(), null, false);
         }
-        return new ReturnMessage("Fields error: One or more fields names are invalid.", null, false);
-    }
-
-    public static List<Object> filterBookAnd(ArrayList<String> variables, ArrayList<String> parametersGettersNames, List<Book> allRecordsBook) {
-
-        for (int i = 0; i < variables.size(); i++) {
-            String var = variables.get(i);
-            String param = parametersGettersNames.get(i);
-            System.out.println(var + " " + param);
-            allRecordsBook = allRecordsBook.stream()
-                    .filter(book -> book.allMethodsGetter(param, book).equals(var))
-                    .collect(Collectors.toList());
-        }
-
-        allRecordsBook.sort(Comparator.comparing(Book::getID_book));
-
-        return Parsers.parseListBookIntoListObject(allRecordsBook);
-    }
-
-    public static List<Object> filterBookOr(ArrayList<String> variables, ArrayList<String> parametersGettersNames, List<Book> allRecordsBook) {
-        List<Book> allRecordsFiltered = new ArrayList<>();
-        List<Book> tempRecordsFiltered;
-
-        for (int i = 0; i < variables.size(); i++) {
-            String var = variables.get(i);
-            String param = parametersGettersNames.get(i);
-            System.out.println(var + " " + param);
-            tempRecordsFiltered = allRecordsBook.stream()
-                    .filter(book -> book.allMethodsGetter(param, book).equals(var))
-                    .collect(Collectors.toList());
-            for (Book book : tempRecordsFiltered) {
-                if (!allRecordsFiltered.contains(book))
-                    allRecordsFiltered.add(book);
-            }
-        }
-
-        allRecordsFiltered.sort(Comparator.comparing(Book::getID_book));
-
-        return Parsers.parseListBookIntoListObject(allRecordsFiltered);
     }
 }
